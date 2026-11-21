@@ -1,0 +1,297 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  box-sizing: border-box;
+  --f-pixel: "Press Start 2P", monospace;
+  --f-term: "VT323", monospace;
+  --f-mono: "Share Tech Mono", monospace;
+  --f-heading: var(--f-pixel);
+  --f-ui: var(--f-term);
+  --r: 8px;
+}
+
+/* THEME 1: CANDY PASTEL (Playful, Multi-Color & Gentle for Kids) */
+body, body[data-t="1"], .theme-1 {
+  --page: #c7d2fe;
+  --body: #e0e7ff;
+  --bezel: #6366f1;
+  --scr: #ffffff;
+  --fld: #f1f5f9;
+  --ink: #1e1b4b;
+  --dim: #475569;
+  --line: #cbd5e1;
+  --btn: #4f46e5;
+  --btnink: #ffffff;
+  --good: #10b981;
+  --bad: #f43f5e;
+  --c-blue: #3b82f6;
+  --c-pink: #ec4899;
+  --c-yellow: #f59e0b;
+  --c-mint: #10b981;
+  --c-purple: #8b5cf6;
+  --glow-color: rgba(79, 70, 229, 0.45);
+  color-scheme: light;
+}
+
+/* THEME 2: MUTED RETRO PASTEL (Earthy, Calming Muted Pastels) */
+body[data-t="2"], .theme-2 {
+  --page: #94a3b8;
+  --body: #cbd5e1;
+  --bezel: #475569;
+  --scr: #f8fafc;
+  --fld: #e2e8f0;
+  --ink: #0f172a;
+  --dim: #334155;
+  --line: #94a3b8;
+  --btn: #0f766e;
+  --btnink: #ffffff;
+  --good: #0d9488;
+  --bad: #e11d48;
+  --c-blue: #0284c7;
+  --c-pink: #f43f5e;
+  --c-yellow: #d97706;
+  --c-mint: #059669;
+  --c-purple: #7c3aed;
+  --glow-color: rgba(15, 118, 110, 0.45);
+  color-scheme: light;
+}
+
+/* THEME 3: CYBER NEON (Electric Neon with Vivid Ruby-Red!) */
+body[data-t="3"], .theme-3 {
+  --page: #0a0416;
+  --body: #160c2e;
+  --bezel: #4c1d95;
+  --scr: #0f0724;
+  --fld: #1c103a;
+  --ink: #ffffff;
+  --dim: #c4b5fd;
+  --line: #3b226b;
+  --btn: #ff004f; /* Vivid Ruby-Red */
+  --btnink: #ffffff;
+  --good: #00f5ff;
+  --bad: #ff004f;
+  --c-blue: #00f5ff;
+  --c-pink: #ff004f;
+  --c-yellow: #ffb700;
+  --c-mint: #00ff88;
+  --c-purple: #b249f8;
+  --glow-color: rgba(255, 0, 79, 0.6);
+}
+
+/* THEME 4: SPACE ARCADE (Cosmic Galaxy) */
+body[data-t="4"], .theme-4 {
+  --page: #080d1a;
+  --body: #111a2e;
+  --bezel: #1e293b;
+  --scr: #0b1222;
+  --fld: #162238;
+  --ink: #f8fafc;
+  --dim: #94a3b8;
+  --line: #223758;
+  --btn: #0284c7;
+  --btnink: #ffffff;
+  --good: #38bdf8;
+  --bad: #f43f5e;
+  --c-blue: #38bdf8;
+  --c-pink: #f43f5e;
+  --c-yellow: #fbbf24;
+  --c-mint: #34d399;
+  --c-purple: #a855f7;
+  --glow-color: rgba(56, 189, 248, 0.5);
+}
+
+/* THEME 5: SUNSET HORIZON (Radiant Dusk) */
+body[data-t="5"], .theme-5 {
+  --page: #151124;
+  --body: #231c38;
+  --bezel: #3b2f5c;
+  --scr: #19142b;
+  --fld: #282042;
+  --ink: #ffffff;
+  --dim: #d8b4fe;
+  --line: #47386d;
+  --btn: #f97316;
+  --btnink: #ffffff;
+  --good: #facc15;
+  --bad: #f43f5e;
+  --c-blue: #60a5fa;
+  --c-pink: #fb7185;
+  --c-yellow: #facc15;
+  --c-mint: #4ade80;
+  --c-purple: #c084fc;
+  --glow-color: rgba(249, 115, 22, 0.6);
+}
+
+/* THEME 6: PIXEL PLAY (Clean Base + Pop Kid Accents) */
+body[data-t="6"], .theme-6 {
+  --page: #475569;
+  --body: #cbd5e1;
+  --bezel: #1e293b;
+  --scr: #ffffff;
+  --fld: #f1f5f9;
+  --ink: #09090b;
+  --dim: #475569;
+  --line: #94a3b8;
+  --btn: #2563eb;
+  --btnink: #ffffff;
+  --good: #059669;
+  --bad: #e11d48;
+  --c-blue: #2563eb;
+  --c-pink: #ec4899;
+  --c-yellow: #ea580c;
+  --c-mint: #059669;
+  --c-purple: #7c3aed;
+  --glow-color: rgba(37, 99, 235, 0.5);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--page);
+  color: var(--ink);
+  font-family: var(--f-term);
+  font-size: 20px;
+  line-height: 1.35;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  overflow: hidden;
+}
+
+/* Arcade Typography Helpers */
+.font-pixel {
+  font-family: var(--f-pixel);
+}
+
+.font-terminal {
+  font-family: var(--f-term);
+}
+
+.font-mono-clean {
+  font-family: var(--f-mono);
+}
+
+/* Subtle CRT curvature */
+.crt-shadow {
+  box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.25);
+}
+
+/* Arcade Push Buttons (Authentic 8-bit cabinet feel + glow) */
+.arcade-btn {
+  background: var(--btn);
+  color: var(--btnink);
+  border-radius: var(--r);
+  padding: 12px 24px;
+  font-family: var(--f-pixel);
+  font-size: 12px;
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 2px solid transparent;
+  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+}
+
+.arcade-btn:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.35);
+}
+
+.arcade-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+}
+
+/* Glowing Pulsing Guide Animation */
+.arcade-btn.glow-guide {
+  animation: guide-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes guide-pulse {
+  0%, 100% {
+    box-shadow: 0 0 14px var(--glow-color), 0 4px 0 rgba(0,0,0,0.3);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 28px var(--glow-color), 0 0 12px var(--glow-color), 0 4px 0 rgba(0,0,0,0.3);
+    transform: scale(1.02);
+  }
+}
+
+.arcade-btn.alt {
+  background: transparent;
+  color: var(--ink);
+  border: 2px solid var(--dim);
+  box-shadow: none;
+}
+
+.arcade-btn.alt:hover {
+  background: var(--fld);
+  border-color: var(--ink);
+}
+
+/* Reticle & Gaze styles */
+.reticle-cross {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+.reticle-cross::before {
+  content: "";
+  position: absolute;
+  left: 21px;
+  top: -14px;
+  width: 3px;
+  height: 76px;
+  background: var(--ink);
+}
+.reticle-cross::after {
+  content: "";
+  position: absolute;
+  top: 21px;
+  left: -14px;
+  height: 3px;
+  width: 76px;
+  background: var(--ink);
+}
+
+.gaze-ring {
+  width: 44px;
+  height: 44px;
+  border: 3px dashed var(--good);
+  border-radius: 50%;
+  animation: spin-gaze 6s linear infinite;
+}
+
+@keyframes spin-gaze {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.tunnel-wall {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--dim) 0 14px,
+    var(--line) 14px 28px
+  );
+}
