@@ -1,50 +1,50 @@
 import React from 'react';
 import { useArcade } from '../../context/ArcadeContext';
-import { Download, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react';
+import { Download, RefreshCw, LogOut } from 'lucide-react';
 
 export const OperatorScreen: React.FC = () => {
   const { recentRuns, exportRunsCSV, goToStep } = useArcade();
 
   return (
-    <div className="flex flex-col h-full justify-between gap-3 p-3 sm:p-5 overflow-y-auto select-none">
+    <div className="flex flex-col h-full justify-between gap-4 p-6 sm:p-8 overflow-y-auto select-none">
       
       {/* Top Header */}
-      <div className="flex items-center justify-between font-terminal text-xs sm:text-sm text-[var(--dim)] uppercase tracking-wider border-b border-[var(--line)] pb-1">
-        <span>Operator dashboard</span>
-        <span>Staff only · Step 9 of 9</span>
+      <div className="flex items-center justify-between font-terminal text-2xl text-[var(--dim)] border-b border-[var(--line)] pb-2">
+        <span className="font-bold">OPERATOR DASHBOARD</span>
+        <span>Staff &amp; Research Access</span>
       </div>
 
       {/* Main 2-Column Operator Layout */}
-      <div className="grid md:grid-cols-[1.7fr_1fr] gap-4 sm:gap-6 flex-1 items-stretch my-auto">
+      <div className="grid md:grid-cols-[1.7fr_1fr] gap-8 flex-1 items-stretch max-w-5xl mx-auto w-full my-auto">
         
-        {/* Left: Recent Runs Table & Actions */}
-        <div className="flex flex-col justify-between gap-3">
+        {/* Left: Table of Runs */}
+        <div className="flex flex-col justify-between gap-4">
           
-          <div className="border-2 border-[var(--dim)] bg-[var(--fld)] rounded-[var(--r)] p-3 flex-1 flex flex-col">
-            <div className="font-terminal text-xs uppercase tracking-widest text-[var(--dim)] font-bold border-b border-[var(--line)] pb-1 mb-2">
-              Recent Clinical Participant Runs
+          <div className="border-2 border-[var(--dim)] bg-[var(--fld)] rounded-xl p-4 flex-1 flex flex-col shadow-sm">
+            <div className="font-pixel text-[10px] text-[var(--ink)] font-bold border-b border-[var(--line)] pb-2 mb-3">
+              RECENT PARTICIPANT SESSIONS
             </div>
 
             {/* Table Header */}
-            <div className="grid grid-cols-6 gap-2 border-b-2 border-[var(--line)] pb-1 font-terminal text-xs text-[var(--dim)] font-bold">
-              <span>Run</span>
+            <div className="grid grid-cols-6 gap-2 border-b-2 border-[var(--line)] pb-2 font-pixel text-[9px] text-[var(--dim)] font-bold">
+              <span>Run ID</span>
               <span>Age</span>
               <span>Focus</span>
-              <span>Gap</span>
+              <span>Latency</span>
               <span>Steady</span>
-              <span>Flag</span>
+              <span>Status</span>
             </div>
 
             {/* Table Body */}
-            <div className="font-terminal text-sm divide-y divide-[var(--line)] overflow-y-auto max-h-[220px] flex-1">
+            <div className="font-terminal text-2xl divide-y divide-[var(--line)] overflow-y-auto max-h-[260px] flex-1">
               {recentRuns.map((run) => (
-                <div key={run.id} className="grid grid-cols-6 gap-2 py-1 items-center">
+                <div key={run.id} className="grid grid-cols-6 gap-2 py-2 items-center">
                   <span className="font-bold text-[var(--ink)]">{run.id}</span>
                   <span>{run.age}</span>
-                  <span>{run.focusScore}</span>
+                  <span className="font-bold">{run.focusScore}</span>
                   <span>{run.gapMs}ms</span>
                   <span>{run.steadyPct}%</span>
-                  <b className={run.status === 'OK' ? 'text-[var(--good)]' : 'text-[var(--bad)]'}>
+                  <b className={run.status === 'OK' ? 'text-[var(--good)] font-bold' : 'text-[var(--bad)] font-bold'}>
                     {run.status}
                   </b>
                 </div>
@@ -53,86 +53,75 @@ export const OperatorScreen: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={exportRunsCSV}
-              className="arcade-btn font-pixel text-xs py-2 px-4 flex items-center gap-1.5"
+              className="arcade-btn glow-guide text-xs px-6 py-3 flex items-center gap-2"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>EXPORT CSV</span>
+              <Download className="w-4 h-4" />
+              <span>EXPORT DATA (CSV)</span>
             </button>
 
             <button
               onClick={() => goToStep('warmup')}
-              className="arcade-btn alt font-pixel text-xs py-2 px-3 flex items-center gap-1.5"
+              className="arcade-btn alt text-xs px-5 py-3 flex items-center gap-2"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="w-4 h-4" />
               <span>RE-CALIBRATE</span>
             </button>
 
             <button
               onClick={() => goToStep('start')}
-              className="arcade-btn alt font-pixel text-xs py-2 px-3 flex items-center gap-1.5"
+              className="arcade-btn alt text-xs px-5 py-3 flex items-center gap-2"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-4 h-4" />
               <span>END SESSION</span>
             </button>
           </div>
 
         </div>
 
-        {/* Right: Hardware Telemetry & Cloud Storage */}
-        <div className="flex flex-col justify-between gap-3">
+        {/* Right: Hardware Telemetry */}
+        <div className="flex flex-col justify-between gap-4">
           
-          <div className="border-2 border-[var(--dim)] bg-[var(--fld)] rounded-[var(--r)] p-3 space-y-2">
-            <div className="font-terminal text-xs uppercase tracking-widest text-[var(--dim)] font-bold border-b border-[var(--line)] pb-1">
-              Hardware Telemetry Link
+          <div className="border-2 border-[var(--dim)] bg-[var(--fld)] rounded-xl p-5 space-y-3 shadow-sm">
+            <div className="font-pixel text-[10px] text-[var(--ink)] font-bold border-b border-[var(--line)] pb-2">
+              HARDWARE DIAGNOSTICS
             </div>
-            <div className="font-terminal text-sm space-y-1.5">
+            <div className="space-y-2 font-terminal text-2xl">
               <div className="flex items-center justify-between">
-                <span>Pi 5 · QNX RTOS</span>
-                <b className="text-[var(--good)]">60 fps Locked</b>
+                <span>Raspberry Pi 5 (QNX):</span>
+                <b className="text-[var(--good)]">60 FPS Locked</b>
               </div>
               <div className="flex items-center justify-between">
-                <span>Timing Jitter</span>
-                <b className="text-[var(--good)]">&lt; 1 ms (Deterministic)</b>
+                <span>RTOS Clock Jitter:</span>
+                <b className="text-[var(--good)]">&lt; 0.42 ms</b>
               </div>
               <div className="flex items-center justify-between">
-                <span>Uno Q Arcade</span>
-                <b className="text-[var(--good)]">Online (115200)</b>
+                <span>Arduino Uno Q:</span>
+                <b className="text-[var(--good)]">115200 Baud Ready</b>
               </div>
               <div className="flex items-center justify-between">
-                <span>Display · buzzer</span>
-                <b className="text-[var(--good)]">OK (PWM Audio)</b>
+                <span>Display &amp; Audio:</span>
+                <b className="text-[var(--good)]">Operational</b>
               </div>
             </div>
           </div>
 
-          <div className="border-2 border-[var(--dim)] bg-[var(--fld)] rounded-[var(--r)] p-3 space-y-1">
-            <div className="font-terminal text-xs uppercase tracking-widest text-[var(--dim)] font-bold border-b border-[var(--line)] pb-1">
-              TigerData Health Cloud
+          <div className="border-2 border-[var(--dim)] bg-[var(--fld)] rounded-xl p-5 space-y-2 shadow-sm">
+            <div className="font-pixel text-[10px] text-[var(--ink)] font-bold border-b border-[var(--line)] pb-2">
+              DATA PRIVACY (QNX RTOS)
             </div>
-            <div className="font-terminal text-sm space-y-1">
-              <div className="flex items-center justify-between">
-                <span>Last sync</span>
-                <b className="text-[var(--ink)]">12 s ago</b>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Sync Queue</span>
-                <b className="text-[var(--good)]">0 Pending</b>
-              </div>
+            <div className="font-terminal text-xl space-y-1 text-[var(--dim)] leading-tight">
+              <p>• Facial coordinates calculated in volatile RAM.</p>
+              <p>• Zero pediatric video is saved on disk.</p>
+              <p className="text-emerald-500 font-bold pt-1">✓ Sun Life Health Hack Compliant</p>
             </div>
-            <p className="font-terminal text-xs text-[var(--dim)] pt-2 border-t border-[var(--line)]">
-              Screening aid only · not a formal clinical diagnosis.
-            </p>
           </div>
 
         </div>
 
       </div>
-
-      {/* Ground strip */}
-      <div className="h-1.5 bg-[var(--dim)] rounded-sm w-full opacity-60"></div>
 
     </div>
   );

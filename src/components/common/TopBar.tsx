@@ -1,50 +1,58 @@
 import React from 'react';
 import { useArcade, STEP_NAMES } from '../../context/ArcadeContext';
-import { Volume2, VolumeX, Cpu, Activity, Award } from 'lucide-react';
+import { Volume2, VolumeX, Menu, Activity } from 'lucide-react';
 
-export const TopBar: React.FC = () => {
+interface TopBarProps {
+  onToggleSteps: () => void;
+  stepsOpen: boolean;
+}
+
+export const TopBar: React.FC<TopBarProps> = ({ onToggleSteps, stepsOpen }) => {
   const { soundMuted, toggleMute, currentStep } = useArcade();
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-[var(--bezel)] text-[var(--scr)] border-b-2 border-black/30 rounded-t-lg select-none">
+    <header className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5 bg-[var(--bezel)] text-[var(--scr)] border-b-2 border-black/40 rounded-t-xl select-none">
       
-      {/* Title & Step */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className="flex items-center gap-1.5 font-pixel text-xs text-[var(--good)]">
-          <Activity className="w-4 h-4 animate-pulse" />
-          <span className="font-bold tracking-wider">HACKWESTERN</span>
-        </div>
-        <span className="text-[10px] font-pixel text-[var(--line)] hidden md:inline">·</span>
-        <span className="text-xs font-terminal text-[var(--scr)] uppercase tracking-widest hidden sm:inline">
-          NEURO-MOTOR ARCADE KIOSK
-        </span>
-      </div>
-
-      {/* Hardware Link Indicators */}
-      <div className="hidden lg:flex items-center gap-2 text-[11px] font-terminal text-[var(--scr)]">
-        <div className="flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded border border-[var(--dim)]">
-          <Cpu className="w-3.5 h-3.5 text-[var(--good)]" />
-          <span>QNX RTOS Pi 5: <b className="text-[var(--good)]">60 FPS (&lt;1ms Jitter)</b></span>
-        </div>
-        <div className="flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded border border-[var(--dim)]">
-          <span>Arduino Uno Q: <b className="text-[var(--good)]">Ready</b></span>
-        </div>
-        <div className="flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded border border-[var(--dim)]">
-          <Award className="w-3.5 h-3.5 text-amber-400" />
-          <span>Sun Life Health Hack</span>
-        </div>
-      </div>
-
-      {/* Controls: Audio Mute & Step counter */}
+      {/* Left: Steps Toggle + Title */}
       <div className="flex items-center gap-3">
-        <span className="font-pixel text-[10px] text-[var(--good)] bg-black/40 px-2 py-1 rounded">
-          {STEP_NAMES[currentStep - 1]}
-        </span>
+        <button
+          onClick={onToggleSteps}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-pixel text-xs font-bold transition-all cursor-pointer ${
+            stepsOpen
+              ? 'bg-[var(--good)] text-black border-transparent'
+              : 'bg-black/40 hover:bg-black/60 border-[var(--dim)] text-[var(--scr)]'
+          }`}
+          title="Toggle Steps Bar"
+        >
+          <Menu className="w-3.5 h-3.5" />
+          <span>STEPS {currentStep}/9</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <Activity className="w-5 h-5 text-[var(--good)] animate-pulse" />
+          <span className="font-pixel text-sm sm:text-base tracking-wider text-white">
+            NEURO ARCADE
+          </span>
+        </div>
+      </div>
+
+      {/* Center: Current Step Title */}
+      <div className="hidden lg:flex items-center gap-2 bg-black/40 px-3 py-1 rounded-md border border-[var(--dim)] font-pixel text-xs text-[var(--good)]">
+        <span>STEP {currentStep}:</span>
+        <span className="text-white">{STEP_NAMES[currentStep - 1]}</span>
+      </div>
+
+      {/* Right: QNX RTOS Status + Audio Mute */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono-clean text-emerald-400 bg-black/40 px-2.5 py-1 rounded border border-[var(--dim)]">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>QNX RTOS Online</span>
+        </div>
 
         <button
           onClick={toggleMute}
-          className="p-1.5 rounded bg-black/30 hover:bg-black/50 text-[var(--scr)] hover:text-white transition-colors border border-[var(--dim)]"
-          title={soundMuted ? 'Unmute 8-Bit Audio' : 'Mute Audio'}
+          className="p-1.5 rounded-lg bg-black/40 hover:bg-black/60 border border-[var(--dim)] text-[var(--scr)] hover:text-white transition-colors cursor-pointer"
+          title={soundMuted ? 'Unmute Audio' : 'Mute Audio'}
         >
           {soundMuted ? (
             <VolumeX className="w-4 h-4 text-rose-400" />
