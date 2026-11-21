@@ -14,6 +14,33 @@ const unverified = { joystick: false, button: false };
 const disconnected: ControllerStatus = { source: null, ...unverified };
 const heartbeatMs = 2000;
 
+function isButtonState(value: unknown): value is boolean | 0 | 1 {
+  return typeof value === 'boolean' || value === 0 || value === 1;
+}
+
+function decodeControllerPacket(line: string) {
+  let packet: unknown;
+  try {
+    packet = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (!packet || typeof packet !== 'object' || !('x' in packet) || !('y' in packet)) return null;
+
+  const { x, y } = packet;
+  if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+  // Yifan's sketch sends percent axes and uses b1 for the separate action button.
+  // The joystick switch (sw) is intentionally unused.
+  if ('b1' in packet) {
+    if (!isButtonState(packet.b1) || Math.abs(x) > 100 || Math.abs(y) > 100) return null;
+    return { x: x / 100, y: y / 100, pressed: Boolean(packet.b1) };
+  }
+
+  if (!('btn' in packet) || !isButtonState(packet.btn) || Math.abs(x) > 1 || Math.abs(y) > 1) return null;
+  return { x, y, pressed: Boolean(packet.btn) };
+}
+
 function getGamepads() {
   try {
     return navigator.getGamepads?.() ?? [];
@@ -136,26 +163,24 @@ function useControllerState() {
           while ((end = buffer.indexOf('\n')) >= 0) {
             const line = buffer.slice(0, end).trim();
             buffer = buffer.slice(end + 1);
-            try {
-              const { x, y, btn } = JSON.parse(line);
-              if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 1 || Math.abs(y) > 1 ||
-                  (typeof btn !== 'boolean' && btn !== 0 && btn !== 1)) continue;
-              const state = serialInput.current;
-              if (performance.now() - state.lastPacket >= heartbeatMs) {
-                state.joystick = false;
-                state.button = false;
-                buttonHeld = false;
-              }
-              state.x = x;
-              state.y = y;
-              state.joystick ||= Math.hypot(x, y) > 0.25;
-              state.button ||= Boolean(btn);
-              state.presses += Number(Boolean(btn) && !buttonHeld);
-              state.lastPacket = performance.now();
-              buttonHeld = Boolean(btn);
-            } catch {
-              // The board can interleave diagnostics with controller packets.
+            const packet = decodeControllerPacket(line);
+            if (!packet) continue;
+
+            const { x, y, pressed } = packet;
+            const state = serialInput.current;
+            const now = performance.now();
+            if (now - state.lastPacket >= heartbeatMs) {
+              state.joystick = false;
+              state.button = false;
+              buttonHeld = false;
             }
+            state.x = x;
+            state.y = y;
+            state.joystick ||= Math.hypot(x, y) > 0.25;
+            state.button ||= pressed;
+            state.presses += Number(pressed && !buttonHeld);
+            state.lastPacket = now;
+            buttonHeld = pressed;
           }
           if (buffer.length > 1024) buffer = '';
         }
