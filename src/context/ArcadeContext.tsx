@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { playSound, toggleAudioMute, isAudioMuted } from '../utils/audio';
 
 export type StepId = 
-  | 'style' 
   | 'start' 
   | 'profile' 
   | 'warmup' 
@@ -13,7 +12,6 @@ export type StepId =
   | 'operator';
 
 export const STEP_IDS: StepId[] = [
-  'style',
   'start',
   'profile',
   'warmup',
@@ -25,7 +23,6 @@ export const STEP_IDS: StepId[] = [
 ];
 
 export const STEP_NAMES = [
-  'STYLE',
   'START',
   'PROFILE',
   'WARM-UP',
@@ -65,8 +62,6 @@ export interface RecentRun {
 }
 
 interface ArcadeContextType {
-  themeId: number;
-  setThemeId: (id: number) => void;
   currentStep: number; // 1-indexed (1 to 9)
   stepId: StepId;
   goToStep: (step: number | StepId) => void;
@@ -88,6 +83,9 @@ interface ArcadeContextType {
   // Mission 1 State
   m1Time: number;
   m1Score: number;
+  m1Hits: number;
+  starsCaught: number;
+  setStarsCaught: (count: number) => void;
   m1Streak: number;
   m1GapMs: number;
   m1Logs: Mission1Log[];
@@ -121,18 +119,17 @@ const INITIAL_RUNS: RecentRun[] = [
 const ArcadeContext = createContext<ArcadeContextType | undefined>(undefined);
 
 export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [themeId, setThemeIdState] = useState<number>(1);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [soundMuted, setSoundMuted] = useState<boolean>(isAudioMuted());
 
   // Player Profile
   const [playerProfile, setPlayerProfile] = useState<PlayerProfile>({
-    nickname: 'PILOT_042',
-    ageGroup: '8–10',
+    nickname: '',
+    ageGroup: '',
     writingHand: 'Right',
-    glasses: 'Yes',
-    consentAdult: true,
-    consentPrivacy: true,
+    glasses: 'No',
+    consentAdult: false,
+    consentPrivacy: false,
   });
 
   // Warmup Calibration (1 to 5)
@@ -141,16 +138,12 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Mission 1 State
   const [m1Time, setM1Time] = useState<number>(20);
-  const [m1Score, setM1Score] = useState<number>(420);
-  const [m1Streak, setM1Streak] = useState<number>(4);
+  const [m1Score, setM1Score] = useState<number>(0);
+  const [m1Streak, setM1Streak] = useState<number>(1);
   const [m1GapMs, setM1GapMs] = useState<number>(240);
-  const [m1Logs, setM1Logs] = useState<Mission1Log[]>([
-    { id: 7, label: '#7 Round', type: 'Round', text: '232 ms', gapMs: 232, success: true },
-    { id: 6, label: '#6 Square', type: 'Square', text: 'Skipped', success: true },
-    { id: 5, label: '#5 Round', type: 'Round', text: '251 ms', gapMs: 251, success: true },
-    { id: 4, label: '#4 Square', type: 'Square', text: 'Pressed', success: false },
-    { id: 3, label: '#3 Round', type: 'Round', text: '228 ms', gapMs: 228, success: true },
-  ]);
+  const [m1Logs, setM1Logs] = useState<Mission1Log[]>([]);
+  const [m1Hits, setM1Hits] = useState(0);
+  const [starsCaught, setStarsCaught] = useState(0);
 
   // Mission 2 State
   const [m2Time, setM2Time] = useState<number>(30);
@@ -166,23 +159,12 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>(INITIAL_RUNS);
   const [savedToTigerData, setSavedToTigerData] = useState<boolean>(true);
 
-  // Apply data-t attribute to document.body
-  const setThemeId = (id: number) => {
-    setThemeIdState(id);
-    document.body.setAttribute('data-t', id.toString());
-    playSound('step');
-  };
-
-  useEffect(() => {
-    document.body.setAttribute('data-t', themeId.toString());
-  }, [themeId]);
-
   const toggleMute = () => {
     const next = toggleAudioMute();
     setSoundMuted(next);
   };
 
-  const stepId = STEP_IDS[currentStep - 1] || 'style';
+  const stepId = STEP_IDS[currentStep - 1] || 'start';
 
   const goToStep = (step: number | StepId) => {
     let target = 1;
@@ -196,11 +178,10 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     playSound('step');
   };
 
-  const nextStep = () => {
-    if (currentStep < STEP_IDS.length) {
-      goToStep(currentStep + 1);
-    }
-  };
+  const nextStep = useCallback(() => {
+    setCurrentStep(previous => Math.min(STEP_IDS.length, previous + 1));
+    playSound('step');
+  }, []);
 
   const prevStep = () => {
     if (currentStep > 1) {
@@ -228,6 +209,7 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const recordM1Hit = (type: 'Round' | 'Square', reactionMs: number) => {
     if (type === 'Round') {
       playSound('hit');
+      setM1Hits(previous => previous + 1);
       setM1Score(prev => prev + 100 * Math.max(1, m1Streak));
       setM1Streak(prev => Math.min(10, prev + 1));
       setM1GapMs(reactionMs);
@@ -263,6 +245,8 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const resetMission1 = () => {
     setM1Time(20);
     setM1Score(0);
+    setM1Hits(0);
+    setM1Logs([]);
     setM1Streak(1);
     setM1GapMs(240);
   };
@@ -282,6 +266,7 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const resetMission2 = () => {
     setM2Time(30);
+    setStarsCaught(0);
     setM2Steady(94);
     setM2OnPath(88);
     setM2EyesOnComet(91);
@@ -333,8 +318,6 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   return (
     <ArcadeContext.Provider
       value={{
-        themeId,
-        setThemeId,
         currentStep,
         stepId,
         goToStep,
@@ -350,6 +333,9 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         resetCalibration,
         m1Time,
         m1Score,
+        m1Hits,
+        starsCaught,
+        setStarsCaught,
         m1Streak,
         m1GapMs,
         m1Logs,
