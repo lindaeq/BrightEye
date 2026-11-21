@@ -2,14 +2,7 @@ import { useArcade } from '../../context/ArcadeContext';
 import { PixelSprite } from '../common/PixelSprite';
 
 export function ResultsScreen() {
-  const { playerProfile, m1Score, m1Hits, starsCaught, goToStep, resetCalibration, resetMission1, resetMission2 } = useArcade();
-
-  function playAgain() {
-    resetCalibration();
-    resetMission1();
-    resetMission2();
-    goToStep('start');
-  }
+  const { playerProfile, m1Score, m1Hits, starsCaught, goToStep } = useArcade();
 
   return (
     <section className="summary-screen">
@@ -22,7 +15,7 @@ export function ResultsScreen() {
         <div><dt>Target lock score</dt><dd>{m1Score}</dd></div>
         <div><dt>Stars caught</dt><dd>{starsCaught}</dd></div>
       </dl>
-      <button type="button" className="arcade-btn" onClick={playAgain}>Play again</button>
+      <button type="button" className="arcade-btn" onClick={() => goToStep('start')}>Play again</button>
       <button type="button" className="arcade-text-button" onClick={() => goToStep('operator')}>Operator view</button>
     </section>
   );

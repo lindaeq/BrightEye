@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useArcadeController } from '../context/ArcadeController';
+import type { InputSource } from './runTelemetry';
 
 const steeringKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
 const deadZone = (value: number) => Math.abs(value) < 0.2 ? 0 : value;
 
-export function useArcadeControls(move: (x: number, y: number, seconds: number) => void, fire?: () => void) {
+export function useArcadeControls(move: (x: number, y: number, seconds: number, source: InputSource) => void, fire?: (source: InputSource) => void) {
   const { input, mouseMode } = useArcadeController();
   const handlers = useRef({ move, fire, mouseMode });
   handlers.current = { move, fire, mouseMode };
@@ -23,7 +24,7 @@ export function useArcadeControls(move: (x: number, y: number, seconds: number) 
       if (event.code === 'Space' && handlers.current.fire &&
         !(event.target instanceof Element && event.target.closest('button, a'))) {
         event.preventDefault();
-        if (!event.repeat) handlers.current.fire();
+        if (!event.repeat) handlers.current.fire('keyboard');
       }
     };
     const keyup = (event: KeyboardEvent) => { keys.delete(event.code); };
@@ -33,6 +34,7 @@ export function useArcadeControls(move: (x: number, y: number, seconds: number) 
       previousTime = now;
       let x = Number(keys.has('ArrowRight') || keys.has('KeyD')) - Number(keys.has('ArrowLeft') || keys.has('KeyA'));
       let y = Number(keys.has('ArrowDown') || keys.has('KeyS')) - Number(keys.has('ArrowUp') || keys.has('KeyW'));
+      const source = x || y ? 'keyboard' : 'joystick';
       const controller = input.current;
       if (!handlers.current.mouseMode) {
         x += deadZone(controller.x);
@@ -41,8 +43,8 @@ export function useArcadeControls(move: (x: number, y: number, seconds: number) 
       const fired = !handlers.current.mouseMode && controller.presses !== presses;
       presses = controller.presses;
       const magnitude = Math.max(1, Math.hypot(x, y));
-      if (x || y) handlers.current.move(x / magnitude, y / magnitude, seconds);
-      if (fired) handlers.current.fire?.();
+      if (x || y) handlers.current.move(x / magnitude, y / magnitude, seconds, source);
+      if (fired) handlers.current.fire?.('joystick');
       frame = requestAnimationFrame(loop);
     };
     window.addEventListener('keydown', keydown);

@@ -31,7 +31,7 @@ export function HowToScreen() {
       playSound('blip');
     }
   };
-  useArcadeControls(move, ping);
+  useArcadeControls(move, () => ping());
 
   function pointerPosition(event: PointerEvent<HTMLDivElement>): Position {
     const bounds = event.currentTarget.getBoundingClientRect();

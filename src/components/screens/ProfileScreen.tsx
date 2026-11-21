@@ -53,6 +53,7 @@ export function ProfileScreen() {
             onChange={(event) => setPlayerProfile({ ...playerProfile, consentAdult: event.target.checked })} />
           A grown-up is here and says it’s okay to play.
         </label>
+        <p className="input-hint">Scores and control movements stay in this tab for replay and can be exported from the operator view. The game does not record camera video.</p>
         <button type="submit" className="arcade-btn">Continue</button>
       </form>
     </section>

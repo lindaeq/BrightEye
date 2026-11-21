@@ -3,6 +3,8 @@ import { useArcade } from '../../context/ArcadeContext';
 import { useArcadeController } from '../../context/ArcadeController';
 import { playSound } from '../../utils/audio';
 import { useArcadeControls } from '../../utils/useArcadeControls';
+import { useMissionTrace } from '../../utils/useMissionTrace';
+import type { InputSource } from '../../utils/runTelemetry';
 
 const roundSeconds = 20;
 
@@ -19,6 +21,7 @@ export const Mission1Screen: React.FC = () => {
   const {
     m1Score,
     recordM1Hit,
+    completeTarget,
     nextStep,
   } = useArcade();
 
@@ -30,6 +33,17 @@ export const Mission1Screen: React.FC = () => {
     isSquare: false,
     spawnTime: performance.now(),
     radius: 30,
+  });
+
+  const { markInput, event: recordEvent, finish } = useMissionTrace(() => {
+    const canvas = canvasRef.current;
+    if (!canvas?.width || !canvas.height) return null;
+    const aim = crosshairRef.current;
+    const target = targetRef.current;
+    return {
+      player: { x: aim.x / canvas.width, y: aim.y / canvas.height },
+      target: { x: target.x / canvas.width, y: target.y / canvas.height, kind: target.isSquare ? 'decoy' : 'round' },
+    };
   });
 
   const startedAt = useRef(performance.now());
@@ -45,12 +59,13 @@ export const Mission1Screen: React.FC = () => {
       setTimeLeft(remaining);
       if (remaining === 0) {
         window.clearInterval(timer);
+        completeTarget(finish());
         playSound('win');
         nextStep();
       }
     }, 100);
     return () => window.clearInterval(timer);
-  }, [nextStep]);
+  }, [nextStep, completeTarget, finish]);
 
   // Spawn new target helper
   const spawnTarget = (width: number, height: number) => {
@@ -174,7 +189,7 @@ export const Mission1Screen: React.FC = () => {
     };
   }, []);
 
-  const handleShoot = () => {
+  const handleShoot = (source: InputSource) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -183,13 +198,18 @@ export const Mission1Screen: React.FC = () => {
     const dy = crosshairRef.current.y - target.y;
     const distance = target.isSquare ? Math.max(Math.abs(dx), Math.abs(dy)) : Math.hypot(dx, dy);
 
-    if (distance <= target.radius + 8) {
-      const reactionTime = Math.round(performance.now() - targetRef.current.spawnTime);
+    const hit = distance <= target.radius + 8;
+    recordEvent({
+      kind: hit ? (target.isSquare ? 'decoy-hit' : 'target-hit') : 'miss',
+      latencyMs: hit && !target.isSquare ? Math.round(performance.now() - target.spawnTime) : undefined,
+      source,
+    });
+    if (hit) {
       if (targetRef.current.isSquare) {
-        recordM1Hit('Square', reactionTime);
+        recordM1Hit('Square');
         setHitToast('That was a decoy!');
       } else {
-        recordM1Hit('Round', reactionTime);
+        recordM1Hit('Round');
         setHitToast('Target hit!');
       }
       window.clearTimeout(toastTimer.current);
@@ -204,14 +224,17 @@ export const Mission1Screen: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    crosshairRef.current.x = e.clientX - rect.left;
-    crosshairRef.current.y = e.clientY - rect.top;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (x !== crosshairRef.current.x || y !== crosshairRef.current.y) markInput('pointer');
+    crosshairRef.current = { x, y };
   };
 
-  useArcadeControls((x, y, seconds) => {
+  useArcadeControls((x, y, seconds, source) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const aim = crosshairRef.current;
+    markInput(source);
     aim.x = Math.max(0, Math.min(canvas.width, aim.x + x * 420 * seconds));
     aim.y = Math.max(0, Math.min(canvas.height, aim.y + y * 420 * seconds));
   }, handleShoot);
@@ -227,13 +250,13 @@ export const Mission1Screen: React.FC = () => {
         <canvas ref={canvasRef} aria-label="Target lock arena" onPointerMove={handleMouseMove}
           onPointerDown={(event) => {
             handleMouseMove(event);
-            handleShoot();
+            handleShoot('pointer');
           }} />
         {hitToast && <p className="target-feedback" role="status">{hitToast}</p>}
       </div>
       <div className="training-footer">
         <p className="input-hint">{mouseMode ? 'Move the pointer to aim · Click or tap to fire' : 'Joystick or arrows to aim · Action button or Space to fire · Tap a target to zap it'}</p>
-        <button type="button" className="arcade-btn" onClick={handleShoot}>Fire</button>
+        <button type="button" className="arcade-btn" onClick={(event) => handleShoot(event.detail === 0 ? 'keyboard' : 'pointer')}>Fire</button>
       </div>
     </section>
   );

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { useArcade } from '../../context/ArcadeContext';
 import { useArcadeController } from '../../context/ArcadeController';
 import { useArcadeControls } from '../../utils/useArcadeControls';
+import { useMissionTrace } from '../../utils/useMissionTrace';
+import type { InputSource } from '../../utils/runTelemetry';
 import { playSound } from '../../utils/audio';
 import { PixelSprite } from '../common/PixelSprite';
 
@@ -11,7 +13,7 @@ const clamp = (value: number) => Math.max(5, Math.min(95, value));
 
 export function Mission2Screen() {
   const { mouseMode } = useArcadeController();
-  const { nextStep, setStarsCaught } = useArcade();
+  const { nextStep, completeComet } = useArcade();
   const field = useRef<HTMLDivElement>(null);
   const ship = useRef({ x: 50, y: 50 });
   const captures = useRef(0);
@@ -21,7 +23,16 @@ export function Mission2Screen() {
   const [cornersPair] = useState(() => Math.random() < 0.5 ? 0 : 2);
   const star = corners[cornersPair + collected % 2];
 
-  function move(x: number, y: number) {
+  const { markInput, event: recordEvent, finish } = useMissionTrace(() => {
+    const target = corners[cornersPair + captures.current % 2];
+    return {
+      player: { x: ship.current.x / 100, y: ship.current.y / 100 },
+      target: { x: target.x / 100, y: target.y / 100, kind: 'star' },
+    };
+  });
+
+  function move(x: number, y: number, source: InputSource) {
+    markInput(source);
     const next = { x: clamp(x), y: clamp(y) };
     ship.current = next;
     setPosition(next);
@@ -31,18 +42,19 @@ export function Mission2Screen() {
     const target = corners[cornersPair + captures.current % 2];
     const distance = Math.hypot((next.x - target.x) * bounds.width / 100, (next.y - target.y) * bounds.height / 100);
     if (distance <= 35) {
+      recordEvent({ kind: 'star-caught', source });
       captures.current++;
       setCollected(captures.current);
       playSound('hit');
     }
   }
 
-  useArcadeControls((x, y, seconds) => {
+  useArcadeControls((x, y, seconds, source) => {
     const fieldSize = field.current?.getBoundingClientRect();
     if (!fieldSize?.width || !fieldSize.height) return;
     const speed = Math.max(240, fieldSize.width * 0.45);
     move(ship.current.x + x * seconds * speed * 100 / fieldSize.width,
-      ship.current.y + y * seconds * speed * 100 / fieldSize.height);
+      ship.current.y + y * seconds * speed * 100 / fieldSize.height, source);
   });
 
   useEffect(() => {
@@ -52,18 +64,18 @@ export function Mission2Screen() {
       setTimeLeft(remaining);
       if (remaining === 0) {
         window.clearInterval(timer);
-        setStarsCaught(captures.current);
+        completeComet(finish(), captures.current);
         playSound('win');
         nextStep();
       }
     }, 100);
     return () => window.clearInterval(timer);
-  }, [nextStep, setStarsCaught]);
+  }, [nextStep, completeComet, finish]);
 
   function steerWithPointer(event: PointerEvent<HTMLDivElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
     move((event.clientX - bounds.left) * 100 / bounds.width,
-      (event.clientY - bounds.top) * 100 / bounds.height);
+      (event.clientY - bounds.top) * 100 / bounds.height, 'pointer');
   }
 
   return (
