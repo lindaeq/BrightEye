@@ -3,6 +3,7 @@ import { useArcade } from '../../context/ArcadeContext';
 import { useArcadeController } from '../../context/ArcadeController';
 import { useArcadeControls } from '../../utils/useArcadeControls';
 import { useMissionTrace } from '../../utils/useMissionTrace';
+import { useEyeTracking } from '../../utils/useEyeTracking';
 import type { InputSource } from '../../utils/runTelemetry';
 import { playSound } from '../../utils/audio';
 import { PixelSprite } from '../common/PixelSprite';
@@ -14,6 +15,8 @@ const clamp = (value: number) => Math.max(5, Math.min(95, value));
 export function Mission2Screen() {
   const { mouseMode } = useArcadeController();
   const { nextStep, completeComet } = useArcade();
+  const eye = useEyeTracking();
+
   const field = useRef<HTMLDivElement>(null);
   const ship = useRef({ x: 50, y: 50 });
   const captures = useRef(0);
@@ -23,11 +26,38 @@ export function Mission2Screen() {
   const [cornersPair] = useState(() => Math.random() < 0.5 ? 0 : 2);
   const star = corners[cornersPair + collected % 2];
 
+  const eyeRef = useRef(eye);
+  eyeRef.current = eye;
+
   const { markInput, event: recordEvent, finish } = useMissionTrace(() => {
     const target = corners[cornersPair + captures.current % 2];
+    const eyeData = eyeRef.current;
+
+    let eyePoint: { x: number; y: number } | null = null;
+    let isFocused = false;
+    let isExcessive = false;
+
+    if (eyeData.connected && !eyeData.isBlinking) {
+      eyePoint = { x: eyeData.gazeX, y: eyeData.gazeY };
+      const targetNormX = target.x / 100;
+      const targetNormY = target.y / 100;
+      const dist = Math.hypot(eyeData.gazeX - targetNormX, eyeData.gazeY - targetNormY);
+
+      if (dist <= 0.28) {
+        isFocused = true;
+      } else if (eyeData.saccadeDetected && dist > 0.38) {
+        // Saccade darting away from tracking path
+        isExcessive = true;
+      }
+    }
+
     return {
       player: { x: ship.current.x / 100, y: ship.current.y / 100 },
       target: { x: target.x / 100, y: target.y / 100, kind: 'star' },
+      eye: eyePoint,
+      saccade: eyeData.saccadeDetected,
+      focused: isFocused,
+      excessive: isExcessive,
     };
   });
 
@@ -82,15 +112,50 @@ export function Mission2Screen() {
     <section className="training-screen">
       <div className="training-heading">
         <div><p className="arcade-kicker">MISSION 2</p><h1>Comet tunnel</h1></div>
-        <p className="beacon-count">{timeLeft}s · {collected} stars</p>
+        <p className="beacon-count">
+          {eye.connected && <span style={{ color: '#00E5FF', marginRight: 12 }}>👁 QNX PURSUIT</span>}
+          {timeLeft}s · {collected} stars
+        </p>
       </div>
-      <p>Fly into the star, then chase it to the opposite corner.</p>
-      <div ref={field} className="training-field comet-field" onPointerDown={(event) => {
+      <p>{eye.connected ? 'Keep your eyes on the star while guiding your ship to it.'
+        : 'Fly into the star, then chase it to the opposite corner.'}</p>
+      <div ref={field} className="training-field comet-field" style={{ position: 'relative' }} onPointerDown={(event) => {
         event.currentTarget.setPointerCapture(event.pointerId);
         steerWithPointer(event);
       }} onPointerMove={(event) => {
         if (event.currentTarget.hasPointerCapture(event.pointerId)) steerWithPointer(event);
       }}>
+        {/* Live Eye Tracking Gaze Reticle */}
+        {eye.connected && !eye.isBlinking && (
+          <div
+            style={{
+              position: 'absolute',
+              left: `${eye.gazeX * 100}%`,
+              top: `${eye.gazeY * 100}%`,
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+              zIndex: 15,
+            }}
+          >
+            <div style={{
+              width: 26,
+              height: 26,
+              borderRadius: '50%',
+              border: `2px solid ${eye.saccadeDetected ? '#FF3366' : '#00E5FF'}`,
+              boxShadow: `0 0 12px ${eye.saccadeDetected ? '#FF3366' : '#00E5FF'}`,
+              display: 'grid',
+              placeItems: 'center',
+            }}>
+              <div style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: eye.saccadeDetected ? '#FF3366' : '#00E5FF',
+              }} />
+            </div>
+          </div>
+        )}
+
         <div key={collected} className="comet-star" style={{ left: star.x + '%', top: star.y + '%' }} aria-hidden="true">✦</div>
         <div className="training-ship" style={{ left: position.x + '%', top: position.y + '%' }} aria-hidden="true">
           <PixelSprite name="ship" size={6} />

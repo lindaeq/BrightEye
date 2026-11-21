@@ -323,6 +323,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .replay-arena { position: relative; min-height: 210px; height: clamp(210px, 35vh, 390px); border: 1px solid var(--violet); background: var(--page); overflow: hidden; }
 .replay-arena svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .replay-arena polyline { fill: none; stroke: var(--violet); stroke-width: 2px; }
+.replay-arena polyline.eye-trail { stroke: #00e5ff; stroke-width: 3.2px; stroke-dasharray: 6 3; }
 .replay-target, .replay-player { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; }
 .replay-player { border: 2px solid var(--pink); }
 .replay-target { background: var(--good); color: var(--page); }
@@ -332,3 +333,38 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .replay-controls input { width: 100%; accent-color: var(--pink); }
 .replay-controls output { font-family: var(--f-term); white-space: nowrap; }
 @media (max-width: 760px) { .operator-columns { grid-template-columns: minmax(0, 1fr); } }
+
+.buzz-chart { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: 5px; margin-top: 8px; text-align: center; }
+.buzz-chart-track { height: 110px; display: flex; flex-direction: column; justify-content: end; border-bottom: 1px solid var(--pink); background: var(--page); }
+.buzz-chart-track span { display: block; background: var(--good); }
+.buzz-table { overflow-x: auto; }
+.buzz-table table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.buzz-table td, .buzz-table th { text-align: left; padding: 7px; border-bottom: 1px solid var(--line); }
+.run-upload-popups {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  display: grid;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+  pointer-events: none;
+}
+
+.run-upload-popup {
+  display: grid;
+  gap: 0.5rem;
+  width: min(17rem, 100%);
+  padding: 0.75rem 1rem;
+  border: 1px solid #7398af;
+  border-radius: 0.35rem;
+  background: #111f2c;
+  color: #f4f9fc;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 35%);
+}
+
+.run-upload-popup progress {
+  width: 100%;
+  height: 0.5rem;
+  accent-color: #79dfbd;
+}

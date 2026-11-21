@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
+const QNX_STREAM_URL = '/qnx/';
+const QNX_TELEMETRY_URL = '/qnx/telemetry';
+
 export function useCameraFeed() {
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
@@ -8,13 +11,42 @@ export function useCameraFeed() {
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [isQnx, setIsQnx] = useState(false);
 
-  useEffect(() => () => {
-    currentRequest.current++;
-    stream.current?.getTracks().forEach((track) => track.stop());
+  // Probe QNX Raspberry Pi 5 camera server on mount
+  useEffect(() => {
+    let unmounted = false;
+    let lastTimestamp = 0;
+
+    async function checkQnxCamera() {
+      try {
+        const res = await fetch(QNX_TELEMETRY_URL, { signal: AbortSignal.timeout(1200) });
+        const sample = res.ok ? await res.json() : null;
+        if (sample?.timestampMs > 0 && sample.timestampMs !== lastTimestamp && !unmounted) {
+          lastTimestamp = sample.timestampMs;
+          setIsQnx(true);
+          setError('');
+          return;
+        }
+      } catch {
+        // QNX Pi stream not active right now
+      }
+      if (!unmounted) setIsQnx(false);
+    }
+
+    checkQnxCamera();
+    const interval = setInterval(checkQnxCamera, 3000);
+
+    return () => {
+      unmounted = true;
+      clearInterval(interval);
+      currentRequest.current++;
+      stream.current?.getTracks().forEach((track) => track.stop());
+    };
   }, []);
 
   async function enable() {
+    if (isQnx) return;
     if (busy.current) return;
     if (!navigator.mediaDevices?.getUserMedia || !video.current) {
       setError('Camera access requires localhost or a secure connection.');
@@ -49,7 +81,9 @@ export function useCameraFeed() {
       });
       preview.srcObject = feed;
       await preview.play();
-      if (request === currentRequest.current && track.readyState === 'live' && !track.muted) setReady(true);
+      if (request === currentRequest.current && track.readyState === 'live' && !track.muted) {
+        setReady(true);
+      }
     } catch {
       if (request === currentRequest.current) {
         setError('Camera unavailable. Check browser permissions and try again.');
@@ -65,5 +99,11 @@ export function useCameraFeed() {
     }
   }
 
-  return { video, ready, pending, error, enable };
+  useEffect(() => {
+    if (!isQnx && video.current && stream.current) {
+      video.current.srcObject = stream.current;
+    }
+  }, [isQnx]);
+
+  return { video, ready: isQnx || ready, pending, error, enable, isQnx, streamUrl: QNX_STREAM_URL };
 }
