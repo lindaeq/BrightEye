@@ -19,7 +19,7 @@ const screens = {
 };
 
 export function AppContent() {
-  const { stepId, nextStep, soundMuted, toggleMute } = useArcade();
+  const { stepId, nextStep, goToStep, setPlayerProfile, resetCalibration, resetMission1, resetMission2, soundMuted, toggleMute } = useArcade();
   const controller = useArcadeController();
   const { setMouseMode } = controller;
   const camera = useCameraFeed();
@@ -37,6 +37,15 @@ export function AppContent() {
   useEffect(() => {
     scene.current?.focus();
   }, [stepId]);
+
+  function startGame() {
+    if (!canStart) return;
+    setPlayerProfile((profile) => ({ ...profile, consentAdult: false }));
+    resetCalibration();
+    resetMission1();
+    resetMission2();
+    nextStep();
+  }
 
   return (
     <div className="arcade-shell">
@@ -88,7 +97,8 @@ export function AppContent() {
                     </button>
                   )}
                   <button type="button" className="arcade-btn" disabled={!canStart}
-                    onClick={() => { if (canStart) nextStep(); }}>Start game</button>
+                    onClick={startGame}>Start game</button>
+                  <button type="button" className="arcade-text-button" onClick={() => goToStep('operator')}>Operator view</button>
                 </div>
                 {controller.message && controller.status.source !== 'serial' && (
                   <p className={controller.message.error ? 'input-hint setup-error' : 'input-hint'}

@@ -1,8 +1,6 @@
 # AeroNeuro: QNX RTOS Pediatric Neuro-Motor Kiosk
 
-A 30-second space arcade kiosk powered by **QNX RTOS** that measures visual reaction time (eyes) vs. motor execution & tremor (hand) to screen for hidden pediatric conditions like **Developmental Coordination Disorder (DCD / Dyspraxia)**, **ADHD**, and **youth concussions**.
-
----
+A space arcade kiosk for practicing joystick controls and reviewing in-game movement and timing.
 
 ## 🏆 Target Prize Tracks
 
@@ -12,29 +10,14 @@ A 30-second space arcade kiosk powered by **QNX RTOS** that measures visual reac
 
 ---
 
-## 🕹 The 30-Second Gameplay Loop
+## Gameplay and operator data
 
-1. **Stage 1: "Target Lock" (15s) — Eye-to-Hand Latency & Impulse Control**
-   - Glowing alien targets pop up randomly on screen with occasional red "decoy" flashes (testing ADHD impulse control).
-   - QNX Camera timestamps the exact millisecond the player's gaze snaps to target ($t_{\text{eye}}$).
-   - Joystick detects crosshair steer and trigger click ($t_{\text{hand}}$).
-   - Live 7-segment digital display flashes reaction gap $\Delta t = t_{\text{hand}} - t_{\text{eye}}$ (e.g. 240 ms) with piezo buzzer chime.
+- Target Lock records shots, decoy hits, and time from a round target appearing to a successful shot.
+- Comet Tunnel records the ship path, star captures, path efficiency, path deviation, and heading changes for completed chases using continuous steering.
+- The Operator Dashboard shows up to 12 completed runs in memory, exports summary CSV, and replays game positions and actions from both missions. Replay samples the scene about 25 times per second. Camera footage is never recorded.
+- Controller changes can reflect deliberate corrections, controller calibration, or hardware noise. The in-game measurements are exploratory. DCD assessment uses standardized testing and functional history. [International DCD practice recommendations](https://doi.org/10.1111/dmcn.14132)
 
-2. **Stage 2: "Asteroid Tunnel" (15s) — Smooth Pursuit & Motor Tremor Check**
-   - Smooth traversing comet moving across the screen while player locks gaze on it and navigates ship through a narrow corridor.
-   - QNX Camera checks for smooth pursuit vs. saccadic intrusions.
-   - Joystick measures high-frequency micro-tremor variance (intention tremor / DCD motor jitter) and corridor boundary deviation.
-
-3. **End-of-Run "Neuro-Motor Card" (5s)**
-   - Displays 3 core scores:
-     1. **Visual Focus & Impulse Score** (e.g., 92/100)
-     2. **Eye-to-Hand Latency** (e.g., 235 ms)
-     3. **Motor Steadiness (Tremor Index)** (e.g., Low Jitter 94%)
-   - Kid-friendly rank badge (e.g., *Sonic Interceptor Specialist*) and exportable summary for parents and clinics.
-
----
-
-## 🛠 Hardware & Code Architecture Split
+## 🛠 Planned Hardware & Code Architecture
 
 | Subsystem | Hardware Platform | Responsibilities |
 |---|---|---|
