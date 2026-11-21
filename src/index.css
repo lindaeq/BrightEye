@@ -332,3 +332,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .replay-controls input { width: 100%; accent-color: var(--pink); }
 .replay-controls output { font-family: var(--f-term); white-space: nowrap; }
 @media (max-width: 760px) { .operator-columns { grid-template-columns: minmax(0, 1fr); } }
+
+.buzz-chart { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: 5px; margin-top: 8px; text-align: center; }
+.buzz-chart-track { height: 110px; display: flex; flex-direction: column; justify-content: end; border-bottom: 1px solid var(--pink); background: var(--page); }
+.buzz-chart-track span { display: block; background: var(--good); }
+.buzz-table { overflow-x: auto; }
+.buzz-table table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.buzz-table td, .buzz-table th { text-align: left; padding: 7px; border-bottom: 1px solid var(--line); }

@@ -3,6 +3,7 @@ import { useArcade } from '../../context/ArcadeContext';
 import { useArcadeController } from '../../context/ArcadeController';
 import { downloadRunSummaries, summarizeRun } from '../../utils/runTelemetry';
 import { RunReplay } from '../common/RunReplay';
+import { BuzzAnalysis } from '../common/BuzzAnalysis';
 
 function percent(value: number | null) {
   return value === null ? '—' : value.toFixed(1) + '%';
@@ -58,6 +59,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
               <RunReplay key={run.id} run={run} />
             </>
           ) : <p className="operator-panel">Complete both missions to see a run here.</p>}
+          <BuzzAnalysis />
         </div>
         <aside className="operator-main">
           <section className="operator-panel">
