@@ -24,21 +24,18 @@ export function ResultsScreen() {
           <dt>Stars Caught</dt>
           <dd>{starsCaught}</dd>
         </div>
-        <div><dt>Target lock score</dt><dd>{m1Score}</dd></div>
+        <div><dt>Odd-one-out score</dt><dd>{m1Score}</dd></div>
         <div>
-          <dt>Visual Focus</dt>
-          <dd style={{ color: '#00E5FF' }}>
-            {stats?.visualFocusPct !== null && stats?.visualFocusPct !== undefined
-              ? `${Math.round(stats.visualFocusPct)}%`
-              : '—'}
-          </dd>
+          <dt>Wrong-corner clicks</dt>
+          <dd>{stats?.decoys ?? '—'}</dd>
         </div>
         <div>
-          <dt>Excessive Jumps</dt>
-          <dd style={{ color: (stats?.excessiveCount ?? 0) > 3 ? '#FF3366' : 'var(--good)' }}>
-            {stats?.excessiveCount ?? '—'}
-          </dd>
+          <dt>Flash-to-gaze</dt>
+          <dd>{stats?.gazeLatencyMedian != null ? `${Math.round(stats.gazeLatencyMedian)} ms` : '—'}</dd>
         </div>
+        <div><dt>Off-trail deviation</dt><dd>{stats?.trailDeviation != null ? `${stats.trailDeviation.toFixed(1)}%` : '—'}</dd></div>
+        <div><dt>Joystick jitter</dt><dd>{stats?.joystickJitter != null ? `${stats.joystickJitter.toFixed(1)}%` : '—'}</dd></div>
+        <div><dt>Gaze lead</dt><dd>{stats?.eyeHandLead != null ? `${stats.eyeHandLead.toFixed(1)}%` : '—'}</dd></div>
         <div>
           <dt>Eye-to-Hand Latency</dt>
           <dd style={{ color: '#E9FAE3' }}>
