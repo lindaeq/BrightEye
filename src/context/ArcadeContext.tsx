@@ -28,8 +28,8 @@ export const STEP_NAMES = [
   'PROFILE',
   'WARM-UP',
   'HOW TO PLAY',
-  'TARGET LOCK',
-  'COMET TUNNEL',
+  'ODD-ONE-OUT',
+  'STEADY PATH',
   'PILOT CARD',
   'OPERATOR',
 ];

@@ -66,7 +66,7 @@ export function HowToScreen() {
           <p className="input-hint">{mouseMode ? 'Move the pointer to aim · Click or tap to ping' : 'Joystick or arrows to steer · Action button or Space to ping · Tap the field to aim'}</p></div>
         {beacon
           ? <button type="button" className="arcade-btn" onClick={() => ping()}>Ping beacon</button>
-          : <button type="button" className="arcade-btn" onClick={nextStep}>Launch mission</button>}
+          : <button type="button" className="arcade-btn" onClick={nextStep}>Start Odd-One-Out</button>}
       </div>
     </section>
   );

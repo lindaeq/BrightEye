@@ -1,5 +1,12 @@
 # Hack Western 13 arcade
 
+## 30-second gameplay
+
+- **Odd-One-Out Corners (15 seconds)** shows four stars. Use the joystick and action button, arrow keys and Space, or click or tap the star with the different color. Each selection starts a new round.
+- **Steady Path (up to 15 seconds)** starts the ship at the beginning of a winding trail. Use the joystick, arrow keys, or drag to collect the stars in order. The stage ends when you collect the final star or time runs out. Brief red distractors appear off the trail at random intervals.
+
+Operator history and CSV export include wrong-corner selections, flash-to-gaze, eye-to-hand time, off-trail deviation, joystick jitter, and signed gaze lead. Gaze timing uses the browser receipt time of live tracker samples, so polling and network delay affect the measurement. Gaze lead compares gaze and ship progress when both are near the trail. The joystick jitter estimate uses short-term changes in the sampled, active stick signal. These are gameplay measurements for a prototype.
+
 ## Save completed runs to Tiger Cloud
 
 1. In the Tiger Console SQL editor for your development service, run [the arcade runs migration](server/001_arcade_runs.sql).
