@@ -2,19 +2,21 @@
 // Reads 1 button + joystick and streams the full controller state over USB serial
 // as one JSON line, 50 times per second.
 //
-// Example line:  {"b1":1,"sw":0,"x":-12,"y":87}
+// Example line: {"b1":1,"sw":0,"x":-12,"y":87}
 //   b1, sw : 1 = pressed, 0 = released
 //   x, y   : -100 .. 100, 0 = centered (deadzone applied)
 //
 // Wiring (Arduino Uno):
-//   Button 1   : one leg -> pin 2 (D2), other leg -> GND
-//   Joystick   : GND -> GND, +5V -> 5V, VRx -> A0, VRy -> A1, SW -> pin 13
+//   Button 1 : one leg -> pin 2 (D2), other leg -> GND
+//   Buzzer   : positive (+) -> pin 4 (D4), negative (-) -> GND
+//   Joystick : GND -> GND, +5V -> 5V, VRx -> A0, VRy -> A1, SW -> pin 13
 // No resistors needed: INPUT_PULLUP uses the Arduino's internal pull-ups.
 
-const int BTN1_PIN = 2;
-const int SW_PIN   = 13;
-const int X_PIN    = A0;
-const int Y_PIN    = A1;
+const int BTN1_PIN   = 2;
+const int BUZZER_PIN = 4;  // Added buzzer on D4
+const int SW_PIN     = 13;
+const int X_PIN      = A0;
+const int Y_PIN      = A1;
 
 const unsigned long SEND_INTERVAL_MS = 20;  // 50 updates per second
 const unsigned long DEBOUNCE_MS      = 15;  // ignore contact bounce shorter than this
@@ -23,7 +25,7 @@ const int DEADZONE                   = 8;   // in output units (-100..100)
 // ---- Debounced button ------------------------------------------------------
 struct Button {
   int pin;
-  bool stable;          // debounced state: true = pressed
+  bool stable;        // debounced state: true = pressed
   bool lastRaw;
   unsigned long lastChange;
 };
@@ -35,13 +37,13 @@ Button buttons[] = {
 const int NUM_BUTTONS = sizeof(buttons) / sizeof(buttons[0]);
 
 void updateButton(Button &b) {
-  bool raw = (digitalRead(b.pin) == LOW);   // LOW = pressed with INPUT_PULLUP
-  if (raw != b.lastRaw) {                   // reading changed: restart the timer
+  bool raw = (digitalRead(b.pin) == LOW);  // LOW = pressed with INPUT_PULLUP
+  if (raw != b.lastRaw) {                  // reading changed: restart the timer
     b.lastRaw = raw;
     b.lastChange = millis();
   }
   if (millis() - b.lastChange >= DEBOUNCE_MS) {
-    b.stable = raw;                         // held steady long enough: accept it
+    b.stable = raw;                        // held steady long enough: accept it
   }
 }
 
@@ -65,6 +67,8 @@ void setup() {
   for (int i = 0; i < NUM_BUTTONS; i++) {
     pinMode(buttons[i].pin, INPUT_PULLUP);
   }
+  pinMode(BUZZER_PIN, OUTPUT);
+
   Serial.begin(115200);
 
   // Calibrate the joystick center. Don't touch the stick while the board starts.
@@ -76,10 +80,20 @@ void setup() {
   }
   centerX = sumX / 32;
   centerY = sumY / 32;
+
+  // Startup chime (1000 Hz for 100 ms)
+  tone(BUZZER_PIN, 1000, 100);
 }
 
 void loop() {
   for (int i = 0; i < NUM_BUTTONS; i++) updateButton(buttons[i]);
+
+  // Example: Play a quick beep when Button 1 is newly pressed
+  static bool prevB1 = false;
+  if (buttons[0].stable && !prevB1) {
+    tone(BUZZER_PIN, 1500, 50); // 1500 Hz for 50 ms
+  }
+  prevB1 = buttons[0].stable;
 
   if (millis() - lastSend >= SEND_INTERVAL_MS) {
     lastSend = millis();
@@ -88,10 +102,14 @@ void loop() {
     int y = axisValue(analogRead(Y_PIN), centerY);
 
     // Build one JSON line. Field names are the contract with the front end.
-    Serial.print("{\"b1\":"); Serial.print(buttons[0].stable ? 1 : 0);
-    Serial.print(",\"sw\":"); Serial.print(buttons[1].stable ? 1 : 0);
-    Serial.print(",\"x\":");  Serial.print(x);
-    Serial.print(",\"y\":");  Serial.print(y);
+    Serial.print("{\"b1\":");
+    Serial.print(buttons[0].stable ? 1 : 0);
+    Serial.print(",\"sw\":");
+    Serial.print(buttons[1].stable ? 1 : 0);
+    Serial.print(",\"x\":");
+    Serial.print(x);
+    Serial.print(",\"y\":");
+    Serial.print(y);
     Serial.println("}");
   }
 }
