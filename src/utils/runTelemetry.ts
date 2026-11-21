@@ -19,7 +19,7 @@ export type MissionTrace = {
   inputs: InputSource[];
 };
 export type RunTelemetry = {
-  id: number;
+  id: string;
   endedAt: string;
   ageGroup: string;
   target: MissionTrace;

@@ -339,3 +339,31 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .buzz-table { overflow-x: auto; }
 .buzz-table table { width: 100%; border-collapse: collapse; font-size: .875rem; }
 .buzz-table td, .buzz-table th { text-align: left; padding: 7px; border-bottom: 1px solid var(--line); }
+.run-upload-popups {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  display: grid;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+  pointer-events: none;
+}
+
+.run-upload-popup {
+  display: grid;
+  gap: 0.5rem;
+  width: min(17rem, 100%);
+  padding: 0.75rem 1rem;
+  border: 1px solid #7398af;
+  border-radius: 0.35rem;
+  background: #111f2c;
+  color: #f4f9fc;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 35%);
+}
+
+.run-upload-popup progress {
+  width: 100%;
+  height: 0.5rem;
+  accent-color: #79dfbd;
+}

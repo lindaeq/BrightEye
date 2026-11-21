@@ -70,7 +70,9 @@ interface ArcadeContextType {
   resetMission2: () => void;
   completeTarget: (trace: MissionTrace) => void;
   completeComet: (trace: MissionTrace, captures: number) => void;
-  recentRuns: RunTelemetry[];
+  pendingRuns: RunTelemetry[];
+  runsVersion: number;
+  uploadRun: (run: RunTelemetry) => void;
 }
 
 const ArcadeContext = createContext<ArcadeContextType | undefined>(undefined);
@@ -97,9 +99,52 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [m1Streak, setM1Streak] = useState(1);
   const [m1Hits, setM1Hits] = useState(0);
   const [starsCaught, setStarsCaught] = useState(0);
-  const [recentRuns, setRecentRuns] = useState<RunTelemetry[]>([]);
+  const [pendingRuns, setPendingRuns] = useState<RunTelemetry[]>([]);
+  const [runsVersion, setRunsVersion] = useState(0);
+  const [uploads, setUploads] = useState<Record<string, { progress: number; state: 'uploading' | 'saved' | 'failed' }>>({});
+  const activeUploads = useRef(new Set<string>());
+  const uploadTimers = useRef(new Map<string, number>());
   const targetTrace = useRef<MissionTrace | null>(null);
-  const nextRunId = useRef(1);
+
+  const uploadRun = useCallback((run: RunTelemetry) => {
+    if (activeUploads.current.has(run.id)) return;
+    window.clearTimeout(uploadTimers.current.get(run.id));
+    uploadTimers.current.delete(run.id);
+    activeUploads.current.add(run.id);
+    setPendingRuns((previous) => previous.some(({ id }) => id === run.id) ? previous : [run, ...previous]);
+    const update = (progress: number, state: 'uploading' | 'saved' | 'failed') => {
+      setUploads((previous) => ({ ...previous, [run.id]: { progress, state } }));
+    };
+    const finish = (saved: boolean) => {
+      activeUploads.current.delete(run.id);
+      update(saved ? 100 : 0, saved ? 'saved' : 'failed');
+      if (saved) {
+        setPendingRuns((previous) => previous.filter(({ id }) => id !== run.id));
+        setRunsVersion((previous) => previous + 1);
+      }
+      const timer = window.setTimeout(() => {
+        uploadTimers.current.delete(run.id);
+        setUploads((previous) => {
+          const next = { ...previous };
+          delete next[run.id];
+          return next;
+        });
+      }, saved ? 2400 : 5000);
+      uploadTimers.current.set(run.id, timer);
+    };
+    update(0, 'uploading');
+    const request = new XMLHttpRequest();
+    request.open('POST', '/api/runs');
+    request.responseType = 'json';
+    request.setRequestHeader('Content-Type', 'application/json');
+    request.timeout = 30000;
+    request.upload.onprogress = ({ loaded, total, lengthComputable }) => {
+      if (lengthComputable) update(Math.min(99, Math.round(loaded / total * 100)), 'uploading');
+    };
+    request.onload = () => finish(request.status === 200 && request.response?.message === 'Run saved');
+    request.onerror = request.ontimeout = () => finish(false);
+    request.send(JSON.stringify(run));
+  }, []);
 
   const completeTarget = useCallback((trace: MissionTrace) => {
     targetTrace.current = trace;
@@ -111,14 +156,14 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!target) return;
     targetTrace.current = null;
     const run = {
-      id: nextRunId.current++,
+      id: crypto.randomUUID(),
       endedAt: new Date().toISOString(),
       ageGroup: playerProfile.ageGroup,
       target,
       comet: trace,
     };
-    setRecentRuns((previous) => [run, ...previous].slice(0, 12));
-  }, [playerProfile.ageGroup]);
+    uploadRun(run);
+  }, [playerProfile.ageGroup, uploadRun]);
 
   const toggleMute = () => {
     const next = toggleAudioMute();
@@ -212,10 +257,21 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         resetMission2,
         completeTarget,
         completeComet,
-        recentRuns,
+        pendingRuns,
+        runsVersion,
+        uploadRun,
       }}
     >
       {children}
+      <div className="run-upload-popups" role="status">
+        {Object.entries(uploads).map(([id, { progress, state }]) => (
+          <div className="run-upload-popup" key={id}>
+            <span>{state === 'saved' ? 'Saved to Tiger Cloud' : state === 'failed'
+              ? 'Upload failed. Retry in Operator.' : 'Uploading run to Tiger Cloud…'}</span>
+            {state !== 'failed' && <progress aria-label="Run upload progress" value={progress} max={100} />}
+          </div>
+        ))}
+      </div>
     </ArcadeContext.Provider>
   );
 };
