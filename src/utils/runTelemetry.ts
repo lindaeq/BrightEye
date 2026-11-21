@@ -1,25 +1,34 @@
 export type Point = { x: number; y: number };
-export type InputSource = 'joystick' | 'keyboard' | 'pointer';
+export type InputSource = 'joystick' | 'keyboard' | 'pointer' | 'eye';
 export type Mission = 'target' | 'comet';
+
 export type TraceFrame = {
   ms: number;
   player: Point;
   target: Point & { kind: 'round' | 'decoy' | 'star' };
   stick: Point | null;
+  eye?: Point | null;           // Normalized 0.0 - 1.0 gaze coordinates
+  saccade?: boolean;            // Rapid saccadic jump
+  focused?: boolean;            // True if gaze is actively focused on needed game target
+  excessive?: boolean;          // True if eye movement is excessive, wandering, or on decoy
 };
+
 export type RunEvent = {
   ms: number;
   kind: 'target-hit' | 'decoy-hit' | 'miss' | 'star-caught';
   latencyMs?: number;
+  eyeToHandMs?: number;
   source: InputSource;
 };
+
 export type MissionTrace = {
   frames: TraceFrame[];
   events: RunEvent[];
   inputs: InputSource[];
 };
+
 export type RunTelemetry = {
-  id: number;
+  id: string;
   endedAt: string;
   ageGroup: string;
   target: MissionTrace;
@@ -28,6 +37,13 @@ export type RunTelemetry = {
 
 function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function medianOf(values: number[]) {
+  values.sort((a, b) => a - b);
+  const middle = Math.floor(values.length / 2);
+  return values.length === 0 ? null : values.length % 2
+    ? values[middle] : (values[middle - 1] + values[middle]) / 2;
 }
 
 function lineDistance(point: Point, start: Point, end: Point) {
@@ -42,11 +58,8 @@ function lineDistance(point: Point, start: Point, end: Point) {
 export function summarizeRun(run: RunTelemetry) {
   const shots = run.target.events;
   const hits = shots.filter((event) => event.kind === 'target-hit');
-  const latencies = hits.flatMap((event) => event.latencyMs === undefined ? [] : [event.latencyMs]).sort((a, b) => a - b);
-  const middle = Math.floor(latencies.length / 2);
-  const median = latencies.length === 0 ? null : latencies.length % 2
-    ? latencies[middle]
-    : (latencies[middle - 1] + latencies[middle]) / 2;
+  const median = medianOf(hits.flatMap((event) => event.latencyMs === undefined ? [] : [event.latencyMs]));
+  const eyeToHandMedian = medianOf(hits.flatMap((event) => event.eyeToHandMs === undefined ? [] : [event.eyeToHandMs]));
 
   // Each capture closes a leg. Frames at the capture timestamp keep the old star.
   const captures = run.comet.events.filter((event) => event.kind === 'star-caught');
@@ -106,25 +119,75 @@ export function summarizeRun(run: RunTelemetry) {
     }
   }
 
+  // Eye movement & focus analytics
+  let totalEyeFrames = 0;
+  let focusedFrames = 0;
+  let excessiveCount = 0;
+  let gazeDeviationSum = 0;
+
+  for (const trace of [run.target, run.comet]) {
+    for (const frame of trace.frames) {
+      if (frame.eye) {
+        totalEyeFrames++;
+        if (frame.focused) focusedFrames++;
+        if (frame.excessive) excessiveCount++;
+        gazeDeviationSum += distance(frame.eye, frame.target);
+      }
+    }
+  }
+
+  const visualFocusPct = totalEyeFrames > 0 ? (focusedFrames / totalEyeFrames) * 100 : null;
+  const meanGazeDeviationPct = totalEyeFrames > 0 ? (gazeDeviationSum / totalEyeFrames / Math.SQRT2) * 100 : null;
+
   const continuousSteering = !run.comet.inputs.includes('pointer');
   return {
-    hits: hits.length, shots: shots.length, decoys: shots.filter((event) => event.kind === 'decoy-hit').length,
-    median, stars: captures.length,
+    hits: hits.length,
+    shots: shots.length,
+    decoys: shots.filter((event) => event.kind === 'decoy-hit').length,
+    median,
+    stars: captures.length,
     pathEfficiency: continuousSteering && traveledDistance > 0 ? directDistance / traveledDistance * 100 : null,
     pathDeviation: continuousSteering && measuredLegs > 0 ? meanDeviationSum / measuredLegs / Math.SQRT2 * 100 : null,
     meanTurnDegrees: continuousSteering && angleCount > 0 ? angleSum / angleCount * 180 / Math.PI : null,
     stickChange: stickInputs.has('joystick') && stickChanges > 0 ? Math.sqrt(changeSquares / stickChanges) * 50 : null,
+    // Eye Tracking Metrics
+    visualFocusPct,
+    excessiveCount: totalEyeFrames ? excessiveCount : null,
+    meanGazeDeviationPct,
+    eyeToHandMedian,
+    hasEyeData: totalEyeFrames > 10,
   };
 }
 
 export function downloadRunSummaries(runs: RunTelemetry[]) {
-  const header = ['Run', 'Ended (UTC)', 'Age band', 'Inputs', 'Hits', 'Shots', 'Decoy hits', 'Median target-to-hit (ms)',
-    'Stars caught', 'Path efficiency (%)', 'Path deviation (% arena diagonal)', 'Mean heading change (degrees)', 'Active stick change (% full axis range)'];
+  const header = [
+    'Run', 'Ended (UTC)', 'Age band', 'Inputs', 'Hits', 'Shots', 'Decoy hits', 'Median target-to-hit (ms)',
+    'Stars caught', 'Path efficiency (%)', 'Path deviation (% arena diagonal)', 'Mean heading change (degrees)',
+    'Active stick change (% full axis range)', 'Visual focus (%)', 'Excessive gaze samples',
+    'Mean gaze error (% arena diagonal)', 'Median eye-to-hand (ms)',
+  ];
   const rows = runs.map((run) => {
     const stats = summarizeRun(run);
     const inputs = [...new Set([...run.target.inputs, ...run.comet.inputs])];
-    return [run.id, run.endedAt, run.ageGroup, inputs.join(' + '), stats.hits, stats.shots, stats.decoys, stats.median,
-      stats.stars, stats.pathEfficiency?.toFixed(1), stats.pathDeviation?.toFixed(1), stats.meanTurnDegrees?.toFixed(1), stats.stickChange?.toFixed(1)];
+    return [
+      run.id,
+      run.endedAt,
+      run.ageGroup,
+      inputs.join(' + '),
+      stats.hits,
+      stats.shots,
+      stats.decoys,
+      stats.median,
+      stats.stars,
+      stats.pathEfficiency?.toFixed(1),
+      stats.pathDeviation?.toFixed(1),
+      stats.meanTurnDegrees?.toFixed(1),
+      stats.stickChange?.toFixed(1),
+      stats.visualFocusPct !== null ? stats.visualFocusPct.toFixed(1) : '—',
+      stats.excessiveCount,
+      stats.meanGazeDeviationPct?.toFixed(1),
+      stats.eyeToHandMedian,
+    ];
   });
   const csv = [header, ...rows].map((row) => row.map((cell) => '"' + String(cell ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));

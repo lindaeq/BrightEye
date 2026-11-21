@@ -4,6 +4,7 @@ import { useArcadeController } from '../../context/ArcadeController';
 import { playSound } from '../../utils/audio';
 import { useArcadeControls } from '../../utils/useArcadeControls';
 import { useMissionTrace } from '../../utils/useMissionTrace';
+import { useEyeTracking } from '../../utils/useEyeTracking';
 import type { InputSource } from '../../utils/runTelemetry';
 
 const roundSeconds = 20;
@@ -14,6 +15,7 @@ interface TargetState {
   isSquare: boolean;
   spawnTime: number;
   radius: number;
+  tEyeLockTime: number | null;
 }
 
 export const Mission1Screen: React.FC = () => {
@@ -25,6 +27,10 @@ export const Mission1Screen: React.FC = () => {
     nextStep,
   } = useArcade();
 
+  const eye = useEyeTracking();
+  const eyeRef = useRef(eye);
+  eyeRef.current = eye;
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const crosshairRef = useRef<{ x: number; y: number }>({ x: 400, y: 250 });
   const targetRef = useRef<TargetState>({
@@ -33,6 +39,7 @@ export const Mission1Screen: React.FC = () => {
     isSquare: false,
     spawnTime: performance.now(),
     radius: 30,
+    tEyeLockTime: null,
   });
 
   const { markInput, event: recordEvent, finish } = useMissionTrace(() => {
@@ -40,9 +47,37 @@ export const Mission1Screen: React.FC = () => {
     if (!canvas?.width || !canvas.height) return null;
     const aim = crosshairRef.current;
     const target = targetRef.current;
+    const eyeData = eyeRef.current;
+
+    let eyePoint: { x: number; y: number } | null = null;
+    let isFocused = false;
+    let isExcessive = false;
+
+    if (eyeData.connected && !eyeData.isBlinking) {
+      eyePoint = { x: eyeData.gazeX, y: eyeData.gazeY };
+      const targetNormX = target.x / canvas.width;
+      const targetNormY = target.y / canvas.height;
+      const dist = Math.hypot(eyeData.gazeX - targetNormX, eyeData.gazeY - targetNormY);
+      const timeSinceSpawn = performance.now() - target.spawnTime;
+
+      if (!target.isSquare && dist <= 0.25) {
+        isFocused = true;
+      } else if (target.isSquare && dist <= 0.20) {
+        // Distractor fixated
+        isExcessive = true;
+      } else if (timeSinceSpawn > 350 && (eyeData.saccadeDetected || dist > 0.52)) {
+        // Erratic off-target jump after initial reaction window
+        isExcessive = true;
+      }
+    }
+
     return {
       player: { x: aim.x / canvas.width, y: aim.y / canvas.height },
       target: { x: target.x / canvas.width, y: target.y / canvas.height, kind: target.isSquare ? 'decoy' : 'round' },
+      eye: eyePoint,
+      saccade: eyeData.saccadeDetected,
+      focused: isFocused,
+      excessive: isExcessive,
     };
   });
 
@@ -76,6 +111,7 @@ export const Mission1Screen: React.FC = () => {
       isSquare,
       spawnTime: performance.now(),
       radius: 30,
+      tEyeLockTime: null,
     };
   };
 
@@ -99,7 +135,14 @@ export const Mission1Screen: React.FC = () => {
     };
     updateCanvasSize();
     crosshairRef.current = { x: canvas.width / 2, y: canvas.height / 2 };
-    targetRef.current = { x: canvas.width * 0.65, y: canvas.height * 0.4, isSquare: false, radius: 30, spawnTime: performance.now() };
+    targetRef.current = {
+      x: canvas.width * 0.65,
+      y: canvas.height * 0.4,
+      isSquare: false,
+      radius: 30,
+      spawnTime: performance.now(),
+      tEyeLockTime: null,
+    };
     const resizeObserver = new ResizeObserver(updateCanvasSize);
     resizeObserver.observe(canvas);
 
@@ -163,7 +206,36 @@ export const Mission1Screen: React.FC = () => {
       }
       ctx.shadowBlur = 0;
 
-      // Draw Crosshair
+      // Draw Live Gaze Reticle from QNX Raspberry Pi
+      const currentEye = eyeRef.current;
+      if (currentEye.connected && !currentEye.isBlinking) {
+        const eyeX = currentEye.gazeX * canvas.width;
+        const eyeY = currentEye.gazeY * canvas.height;
+
+        // Check if Gaze has locked onto target (records t_eye)
+        if (!target.tEyeLockTime) {
+          const distToTarget = Math.hypot(eyeX - target.x, eyeY - target.y);
+          if (distToTarget <= target.radius + 40) {
+            target.tEyeLockTime = now;
+          }
+        }
+
+        ctx.strokeStyle = currentEye.saccadeDetected ? '#FF3366' : '#00E5FF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(eyeX, eyeY, 16, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = currentEye.saccadeDetected ? '#FF3366' : '#00E5FF';
+        ctx.beginPath();
+        ctx.arc(eyeX, eyeY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.fillText(currentEye.saccadeDetected ? 'SNAP!' : 'EYE', eyeX + 20, eyeY + 4);
+      }
+
+      // Draw Crosshair (Hand / Joystick / Mouse)
       const ch = crosshairRef.current;
       ctx.strokeStyle = '#D9BDC5';
       ctx.lineWidth = 3;
@@ -199,18 +271,24 @@ export const Mission1Screen: React.FC = () => {
     const distance = target.isSquare ? Math.max(Math.abs(dx), Math.abs(dy)) : Math.hypot(dx, dy);
 
     const hit = distance <= target.radius + 8;
+    const now = performance.now();
+    const eyeLock = target.tEyeLockTime;
+    const reactionGapMs = eyeLock ? Math.round(now - eyeLock) : undefined;
+
     recordEvent({
       kind: hit ? (target.isSquare ? 'decoy-hit' : 'target-hit') : 'miss',
-      latencyMs: hit && !target.isSquare ? Math.round(performance.now() - target.spawnTime) : undefined,
+      latencyMs: hit && !target.isSquare ? Math.round(now - target.spawnTime) : undefined,
+      eyeToHandMs: hit && !target.isSquare ? reactionGapMs : undefined,
       source,
     });
+
     if (hit) {
       if (targetRef.current.isSquare) {
         recordM1Hit('Square');
         setHitToast('That was a decoy!');
       } else {
         recordM1Hit('Round');
-        setHitToast('Target hit!');
+        setHitToast(reactionGapMs ? `Target hit! Gap: ${reactionGapMs}ms` : 'Target hit!');
       }
       window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setHitToast(null), 900);
@@ -243,7 +321,10 @@ export const Mission1Screen: React.FC = () => {
     <section className="training-screen">
       <div className="training-heading">
         <div><p className="arcade-kicker">MISSION 1</p><h1>Target lock</h1></div>
-        <p className="beacon-count">{timeLeft}s &middot; {m1Score} pts</p>
+        <p className="beacon-count">
+          {eye.connected && <span style={{ color: '#00E5FF', marginRight: 12 }}>👁 QNX LOCK</span>}
+          {timeLeft}s &middot; {m1Score} pts
+        </p>
       </div>
       <p>{mouseMode ? 'Click the round targets. Let the squares pass.' : 'Aim at the round targets and press the action button. Let the squares pass.'}</p>
       <div className="training-field target-field">

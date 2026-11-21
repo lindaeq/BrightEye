@@ -84,7 +84,7 @@ export function AppContent() {
                   ? 'Mouse mode is on. You can play without connecting hardware.'
                   : 'Check your gear, or select the mouse icon above to play without hardware.'}</p>
                 <ul className="preflight-checks" aria-label="Launch checklist" aria-live="polite">
-                  <li data-ready={camera.ready}>Camera <b>{camera.ready ? 'Ready' : camera.pending ? 'Waiting for permission' : camera.error ? 'Unavailable' : 'Enable camera'}</b></li>
+                  <li data-ready={camera.ready}>Camera <b>{camera.isQnx ? 'QNX Vision (Pi 5)' : camera.ready ? 'Ready' : camera.pending ? 'Waiting for permission' : camera.error ? 'Unavailable' : 'Enable camera'}</b></li>
                   <li data-ready={!!controller.status.source}>{controller.status.source === 'gamepad' ? 'USB gamepad' : 'Arduino'} <b>{controller.status.source ? 'Connected' : 'Waiting for input'}</b></li>
                   <li data-ready={controller.status.joystick}>Joystick <b>{controller.status.joystick ? 'Ready' : 'Move the stick'}</b></li>
                   <li data-ready={controller.status.button}>Action button <b>{controller.status.button ? 'Ready' : 'Press the button'}</b></li>
@@ -115,11 +115,23 @@ export function AppContent() {
         </div>
         <aside className="camera-monitor" hidden={!showPreview} aria-label="Camera preview">
           <div className="camera-preview" data-ready={camera.ready}>
-            <video ref={camera.video} autoPlay muted playsInline aria-label="Live webcam feed" />
+            {camera.isQnx ? (
+              <img
+                src={camera.streamUrl}
+                alt="QNX RTOS Iris Tracking Feed"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <video ref={camera.video} autoPlay muted playsInline aria-label="Live webcam feed" />
+            )}
             {!camera.ready && <Camera className="camera-placeholder" size={28} aria-hidden="true" />}
-            {camera.ready && <span className="camera-live">Camera live</span>}
+            {camera.ready && (
+              <span className="camera-live">
+                {camera.isQnx ? 'QNX RTOS LIVE' : 'Camera live'}
+              </span>
+            )}
           </div>
-          {!camera.ready && (
+          {!camera.ready && !camera.isQnx && (
             <div className="camera-actions">
               <button type="button" className="arcade-btn alt" disabled={camera.pending} onClick={camera.enable}>
                 {camera.pending ? 'Waiting for camera…' : 'Enable camera'}
