@@ -62,16 +62,27 @@ preview in this build. The QNX measurements described above are project goals.
 
 ### Arduino controller input
 
-Use **Connect Arduino** in a browser with Web Serial support and select the
-controller's serial port. The controller must expose a browser-visible serial
-stream at 115200 baud and continuously send newline-delimited JSON, for example:
+Open [the controller sketch](firmware/controller/controller.ino) in Arduino IDE
+and upload it to the board. It is based on `yifan_controller`. Leave the stick
+centered while the board starts so it can calibrate. The sketch assigns joystick
+VRx to A0, VRy to A1, the separate button to D2, and the optional joystick switch
+to D13. For Uno Q, power a 3.3 V-compatible joystick from **3V3**. The Uno Q's
+A0 and A1 pins are not 5 V tolerant.
+[Uno Q analog input specifications](https://docs.arduino.cc/tutorials/uno-q/power-specification/#analog-inputs)
+
+Use **Connect Arduino** in a browser with Web Serial support, then select the
+serial port carrying the sketch's output. Close any serial monitor that has the
+port open. The sketch sends newline-delimited JSON at 115200 baud:
 
 ```json
-{"x":0.45,"y":-0.2,"btn":false}
+{"b1":1,"sw":0,"x":-12,"y":87}
 ```
 
-Use values from -1 to 1 for the two joystick axes (positive X is right, positive
-Y is down). Send the **separate button's** debounced state as `btn`, including both
-press and release. Keep sending packets while the controls are idle so the app
-can detect a dropped connection. A compatible USB gamepad can also pass the
-hardware checks using its first two axes and first button.
+The game scales the -100 to 100 axes and treats `b1` as the action button.
+`sw` is the joystick's built-in switch. Older controllers that send
+`{"x":0.45,"y":-0.2,"btn":false}` with normalized axes are still supported.
+A compatible USB gamepad can also pass the hardware checks.
+
+On Uno Q, output visible only in the Arduino App Lab console must be exposed
+through a browser-accessible serial port before Web Serial can read it.
+[Uno Q user manual](https://docs.arduino.cc/tutorials/uno-q/user-manual/)
