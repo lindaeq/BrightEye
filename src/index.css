@@ -1,0 +1,353 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  box-sizing: border-box;
+  --px: "Press Start 2P", monospace;
+  --vt: "VT323", monospace;
+  --f1: var(--px);
+  --f2: var(--vt);
+  --r: 4px;
+}
+
+/* THEME 1: MOON ROCK (Default) */
+body, body[data-t="1"], .theme-1 {
+  --page: #8e99a6;
+  --body: #dfe3e8;
+  --bezel: #4a5260;
+  --scr: #cfd8e0;
+  --fld: #c0cbd5;
+  --ink: #1a2430;
+  --dim: #4d5b6b;
+  --line: #9fb0c0;
+  --a1: #1a2430;
+  --good: #1f5f8b;
+  --bad: #b03a2e;
+  --on: #cfd8e0;
+  --dial: #c3c9d1;
+  --dialink: #4d5b6b;
+  --btn: #1a2430;
+  --btnink: #e8eef4;
+  --mqc: #6b7685;
+}
+
+/* THEME 2: SUNSET */
+body[data-t="2"], .theme-2 {
+  --page: #121212;
+  --body: #2b2b2b;
+  --bezel: #0c0c0c;
+  --scr: #17140d;
+  --fld: #1f1b11;
+  --ink: #ffc247;
+  --dim: #c29a45;
+  --line: #4a3f1d;
+  --a1: #ffc247;
+  --good: #ffd36b;
+  --bad: #ff7350;
+  --on: #17140d;
+  --dial: #1a1a1a;
+  --dialink: #b08a3a;
+  --btn: #ffc247;
+  --btnink: #17140d;
+  --mqc: #8a6d2e;
+}
+
+/* THEME 3: DEEP SEA */
+body[data-t="3"], .theme-3 {
+  --page: #1a1f2b;
+  --body: #c9ced6;
+  --bezel: #2b3140;
+  --scr: #0f1b2d;
+  --fld: #16273f;
+  --ink: #eaf2ff;
+  --dim: #9fb5d2;
+  --line: #2c4666;
+  --a1: #7cc4ff;
+  --good: #7cc4ff;
+  --bad: #ff8a7a;
+  --on: #0f1b2d;
+  --dial: #b3bac5;
+  --dialink: #3d4a5e;
+  --btn: #0f1b2d;
+  --btnink: #eaf2ff;
+  --mqc: #5e6a80;
+}
+
+/* THEME 4: CLOUD */
+body[data-t="4"], .theme-4 {
+  --page: #bdb9ae;
+  --body: #e8e4d8;
+  --bezel: #6b6a66;
+  --scr: #f1efe6;
+  --fld: #e6e3d6;
+  --ink: #111111;
+  --dim: #55534c;
+  --line: #c0bba9;
+  --a1: #111111;
+  --good: #111111;
+  --bad: #c2342b;
+  --on: #f1efe6;
+  --dial: #d3cfc2;
+  --dialink: #55534c;
+  --btn: #111111;
+  --btnink: #f1efe6;
+  --mqc: #85827a;
+  color-scheme: light;
+}
+
+/* THEME 5: COMET */
+body[data-t="5"], .theme-5 {
+  --page: #2a2a2e;
+  --body: #3b3b41;
+  --bezel: #18181b;
+  --scr: #26262b;
+  --fld: #2f2f36;
+  --ink: #f2f2f2;
+  --dim: #b4b4be;
+  --line: #4a4a53;
+  --a1: #f2f2f2;
+  --good: #f2c14e;
+  --bad: #ff7a6b;
+  --on: #26262b;
+  --dial: #2a2a2e;
+  --dialink: #a3a3ad;
+  --btn: #f2c14e;
+  --btnink: #26262b;
+  --mqc: #85858f;
+}
+
+/* THEME 6: NEON */
+body[data-t="6"], .theme-6 {
+  --page: #07040d;
+  --body: #0d0716;
+  --bezel: #5b34b8;
+  --scr: #110a1e;
+  --fld: #1a1030;
+  --ink: #f7eefc;
+  --dim: #c1abe3;
+  --line: #3b2a5c;
+  --a1: #ff5db1;
+  --good: #ff5db1;
+  --bad: #b99cff;
+  --on: #110a1e;
+  --dial: #1c1230;
+  --dialink: #b9a3d9;
+  --btn: #ff5db1;
+  --btnink: #110a1e;
+  --mqc: #8a63ea;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--page);
+  color: var(--ink);
+  font-family: var(--f2);
+  min-height: 100vh;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar for Retro Feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--fld);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--dim);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--a1);
+}
+
+/* Typography Helpers */
+.font-pixel {
+  font-family: var(--px);
+}
+
+.font-terminal {
+  font-family: var(--vt);
+}
+
+/* Authentic CRT Screen Scanlines */
+.scanlines-overlay {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.2) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.02),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.02)
+  );
+  background-size: 100% 4px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Screen CRT curvature / subtle shadow */
+.crt-screen-shadow {
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
+}
+
+/* Arcade Push Button Styling */
+.arcade-btn {
+  background: var(--a1);
+  color: var(--on);
+  border-radius: var(--r);
+  padding: 8px 18px;
+  font-family: var(--f1);
+  font-size: 11px;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px solid transparent;
+  transition: transform 0.08s ease, filter 0.15s ease, background-color 0.15s ease;
+  user-select: none;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.25);
+}
+
+.arcade-btn:hover {
+  filter: brightness(1.15);
+}
+
+.arcade-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+}
+
+.arcade-btn.alt {
+  background: transparent;
+  color: var(--ink);
+  border: 2px solid var(--dim);
+  box-shadow: none;
+}
+
+.arcade-btn.alt:hover {
+  background: var(--fld);
+  border-color: var(--ink);
+}
+
+.arcade-btn.blink {
+  animation: arcade-blink 1.2s steps(2) infinite;
+}
+
+@keyframes arcade-blink {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Theme Grid Swatches */
+.tc-button {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 3px solid transparent;
+  border-radius: var(--r);
+  transition: all 0.15s ease;
+}
+
+.tc-button:hover {
+  transform: translateY(-2px);
+}
+
+.tc-button.on {
+  border-color: var(--a1);
+  box-shadow: 0 0 12px rgba(0,0,0,0.3);
+}
+
+/* Crosshair & Target Reticle */
+.reticle-cross {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+.reticle-cross::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: -8px;
+  width: 2px;
+  height: 48px;
+  background: var(--ink);
+}
+.reticle-cross::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: -8px;
+  height: 2px;
+  width: 48px;
+  background: var(--ink);
+}
+
+/* Gaze Ring */
+.gaze-ring {
+  width: 28px;
+  height: 28px;
+  border: 2px dashed var(--a1);
+  border-radius: 50%;
+  animation: spin-gaze 6s linear infinite;
+}
+
+@keyframes spin-gaze {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Tunnel wall stripes */
+.tunnel-wall {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--dim) 0 8px,
+    var(--line) 8px 16px
+  );
+}
+
+/* Dial Slider Notched Track */
+.dial-track {
+  --nt: 6px;
+  position: relative;
+  height: 52px;
+  background: var(--dial);
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  clip-path: polygon(
+    var(--nt) 0,
+    calc(100% - var(--nt)) 0,
+    calc(100% - var(--nt)) var(--nt),
+    100% var(--nt),
+    100% calc(100% - var(--nt)),
+    calc(100% - var(--nt)) calc(100% - var(--nt)),
+    calc(100% - var(--nt)) 100%,
+    var(--nt) 100%,
+    var(--nt) calc(100% - var(--nt)),
+    0 calc(100% - var(--nt)),
+    0 var(--nt),
+    var(--nt) var(--nt)
+  );
+}
+
+.dial-track:active {
+  cursor: grabbing;
+}
