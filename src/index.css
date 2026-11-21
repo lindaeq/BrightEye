@@ -323,6 +323,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .replay-arena { position: relative; min-height: 210px; height: clamp(210px, 35vh, 390px); border: 1px solid var(--violet); background: var(--page); overflow: hidden; }
 .replay-arena svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .replay-arena polyline { fill: none; stroke: var(--violet); stroke-width: 2px; }
+.replay-arena polyline.eye-trail { stroke: #00e5ff; stroke-width: 3.2px; stroke-dasharray: 6 3; }
 .replay-target, .replay-player { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; }
 .replay-player { border: 2px solid var(--pink); }
 .replay-target { background: var(--good); color: var(--page); }

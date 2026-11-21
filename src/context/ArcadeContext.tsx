@@ -71,6 +71,7 @@ interface ArcadeContextType {
   completeTarget: (trace: MissionTrace) => void;
   completeComet: (trace: MissionTrace, captures: number) => void;
   pendingRuns: RunTelemetry[];
+  latestRun: RunTelemetry | null;
   runsVersion: number;
   uploadRun: (run: RunTelemetry) => void;
 }
@@ -100,6 +101,7 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [m1Hits, setM1Hits] = useState(0);
   const [starsCaught, setStarsCaught] = useState(0);
   const [pendingRuns, setPendingRuns] = useState<RunTelemetry[]>([]);
+  const [latestRun, setLatestRun] = useState<RunTelemetry | null>(null);
   const [runsVersion, setRunsVersion] = useState(0);
   const [uploads, setUploads] = useState<Record<string, { progress: number; state: 'uploading' | 'saved' | 'failed' }>>({});
   const activeUploads = useRef(new Set<string>());
@@ -162,6 +164,7 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       target,
       comet: trace,
     };
+    setLatestRun(run);
     uploadRun(run);
   }, [playerProfile.ageGroup, uploadRun]);
 
@@ -258,6 +261,7 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         completeTarget,
         completeComet,
         pendingRuns,
+        latestRun,
         runsVersion,
         uploadRun,
       }}

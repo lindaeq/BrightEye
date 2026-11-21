@@ -12,3 +12,13 @@ Finish both missions and watch the upload popup. Open Operator → Run history t
 ```sql
 SELECT id, ended_at FROM public.arcade_runs ORDER BY ended_at DESC LIMIT 5;
 ```
+
+## Use the Raspberry Pi eye tracker
+
+On the Pi, install Python packages `opencv-python`, `numpy`, and `flask` in your Python environment. Run `python3 kiosk_eyetrack.py` with the camera attached. The tracker serves live gaze telemetry and a camera preview on port 8080.
+
+If Vite runs on a different computer, set `QNX_TRACKER_URL` to `http://<pi-ip>:8080` before starting Vite. In PowerShell, use `$env:QNX_TRACKER_URL = 'http://<pi-ip>:8080'`. When both services run on the Pi, Vite uses port 8080 on localhost by default.
+
+Check **Operator → Hardware diagnostics → Eye tracker** for the connection status. Complete a run to see its gaze metrics and path in Operator. Runs saved before eye tracking still replay in the same history. Tiger stores gaze samples in the existing mission trace columns.
+
+The browser can keep using the Arduino controller through Web Serial. If your Pi setup also needs serial gaze output, install `pyserial` and set `EYE_TRACKER_SERIAL_PORT` to a dedicated serial port before launching the tracker.

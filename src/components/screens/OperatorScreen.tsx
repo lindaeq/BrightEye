@@ -4,6 +4,7 @@ import { useArcadeController } from '../../context/ArcadeController';
 import { downloadRunSummaries, summarizeRun, type RunTelemetry } from '../../utils/runTelemetry';
 import { RunReplay } from '../common/RunReplay';
 import { BuzzAnalysis } from '../common/BuzzAnalysis';
+import { useEyeTracking } from '../../utils/useEyeTracking';
 
 function percent(value: number | null) {
   return value === null ? '—' : value.toFixed(1) + '%';
@@ -12,6 +13,7 @@ function percent(value: number | null) {
 export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
   const { pendingRuns, runsVersion, uploadRun, goToStep } = useArcade();
   const { status } = useArcadeController();
+  const eye = useEyeTracking();
   const [savedRuns, setSavedRuns] = useState<Pick<RunTelemetry, 'id' | 'endedAt'>[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [loadedRun, setLoadedRun] = useState<RunTelemetry>();
@@ -97,6 +99,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
   const stats = run && summarizeRun(run);
   const inputs = run ? [...new Set([...run.target.inputs, ...run.comet.inputs])] : [];
   const checks = [
+    ['Eye tracker', eye.connected],
     ['Camera', cameraReady],
     [status.source === 'gamepad' ? 'USB gamepad' : 'Arduino', !!status.source],
     ['Joystick', status.joystick],
@@ -158,6 +161,10 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
                   <div><dt>Path deviation</dt><dd>{percent(stats.pathDeviation)}</dd></div>
                   <div><dt>Mean heading change</dt><dd>{stats.meanTurnDegrees === null ? '—' : stats.meanTurnDegrees.toFixed(1) + '°'}</dd></div>
                   <div><dt>Active stick change</dt><dd>{percent(stats.stickChange)}</dd></div>
+                  <div><dt>Visual focus rate</dt><dd>{percent(stats.visualFocusPct)}</dd></div>
+                  <div><dt>Excessive gaze samples</dt><dd>{stats.excessiveCount ?? '—'}</dd></div>
+                  <div><dt>Mean gaze error</dt><dd>{percent(stats.meanGazeDeviationPct)}</dd></div>
+                  <div><dt>Median eye-to-hand</dt><dd>{stats.eyeToHandMedian === null ? '—' : Math.round(stats.eyeToHandMedian) + ' ms'}</dd></div>
                 </dl>
               </section>
               <RunReplay key={run.id} run={run} />
@@ -177,7 +184,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
             <p>These measurements can help you review timing and steering within the game. Developmental coordination disorder assessment uses standardized motor tests and considers how a child manages everyday activities.
               {' '}<a href="https://doi.org/10.1111/dmcn.14132" target="_blank" rel="noreferrer">DCD clinical guidance</a>
             </p>
-            <p className="input-hint">Replay uses game positions and actions. Camera video is never recorded.</p>
+            <p className="input-hint">Saved runs include game telemetry and gaze coordinates when the eye tracker is connected. Camera video is never recorded.</p>
           </section>
           <section className="operator-panel">
             <h2>Hardware diagnostics</h2>
