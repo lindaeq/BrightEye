@@ -422,4 +422,5 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   pointer-events: none;
 }
 .steady-star[data-next='true'] { color: #fff082; text-shadow: 0 0 12px #fff082; }
+.steady-distractor { color: #ff606d; text-shadow: 0 0 12px #ff606d; }
 .replay-arena .odd-corner { width: auto; height: auto; font-size: clamp(1rem, 4vw, 2.3rem); pointer-events: none; }

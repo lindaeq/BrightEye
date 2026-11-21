@@ -52,3 +52,8 @@ export function projectOntoTrail(point: Point) {
   }
   return { distance, progress: along / trailOffsets[trailOffsets.length - 1] };
 }
+
+export const distractorSpots = Array.from({ length: 63 }, (_, index) => ({
+  x: 0.1 + (index % 9) * 0.1,
+  y: 0.12 + Math.floor(index / 9) * 0.125,
+})).filter((point) => projectOntoTrail(point).distance >= trailRadius + 40);

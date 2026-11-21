@@ -6,17 +6,23 @@ export function useMissionClock(onFinish: () => void) {
   const finish = useRef(onFinish);
   finish.current = onFinish;
   const deadline = useRef(0);
+  const endEarly = useRef(() => {});
 
   useEffect(() => {
     deadline.current = performance.now() + missionSeconds * 1000;
     const countdown = window.setInterval(() => {
       setTimeLeft(Math.max(0, Math.ceil((deadline.current - performance.now()) / 1000)));
     }, 100);
-    const timeout = window.setTimeout(() => {
+    function end() {
+      if (deadline.current === 0) return;
+      deadline.current = 0;
       window.clearInterval(countdown);
+      window.clearTimeout(timeout);
       setTimeLeft(0);
       finish.current();
-    }, missionSeconds * 1000);
+    }
+    const timeout = window.setTimeout(end, missionSeconds * 1000);
+    endEarly.current = end;
     return () => {
       deadline.current = 0;
       window.clearTimeout(timeout);
@@ -24,5 +30,5 @@ export function useMissionClock(onFinish: () => void) {
     };
   }, []);
 
-  return { timeLeft, deadline };
+  return { timeLeft, deadline, endEarly };
 }

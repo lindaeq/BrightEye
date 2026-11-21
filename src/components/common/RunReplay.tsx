@@ -142,6 +142,8 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
               <span key={corner.label} className="odd-corner" data-odd={quadrant(frame.target) === index}
                 style={{ left: `${corner.x * 100}%`, top: `${corner.y * 100}%` }}>✦</span>
             ))}
+            {frame.distractor && <span className="steady-star steady-distractor"
+              style={{ left: `${frame.distractor.x * 100}%`, top: `${frame.distractor.y * 100}%` }}>✦</span>}
             {/* SVG Path Layer (Normalized 0-100 coordinates) */}
             <svg
               viewBox="0 0 100 100"

@@ -12,6 +12,7 @@ export type TraceFrame = {
   focused?: boolean;            // True if gaze is actively focused on needed game target
   excessive?: boolean;          // True if eye movement is excessive, wandering, or on decoy
   trail?: { deviationPct: number; eyeLeadPct?: number; joystick: boolean };
+  distractor?: Point;
 };
 
 export type RunEvent = {

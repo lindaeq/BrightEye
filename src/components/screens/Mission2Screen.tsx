@@ -1,7 +1,7 @@
-import { useRef, useState, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { PixelSprite } from '../common/PixelSprite';
 import { useArcade } from '../../context/ArcadeContext';
-import { checkpoints, clampUnit, projectOntoTrail, trail, trailDistance, trailHeight, trailPoints,
+import { checkpoints, clampUnit, distractorSpots, projectOntoTrail, trail, trailDistance, trailHeight, trailPoints,
   trailRadius, trailWidth } from '../../utils/missionGames';
 import { playSound } from '../../utils/audio';
 import type { InputSource, Point } from '../../utils/runTelemetry';
@@ -20,6 +20,8 @@ export function Mission2Screen() {
   const [position, setPosition] = useState(ship.current);
   const [collected, setCollected] = useState(0);
   const [onTrail, setOnTrail] = useState(true);
+  const [distractor, setDistractor] = useState<Point>();
+  const visibleDistractor = useRef<Point | undefined>(undefined);
 
   const { markInput, event, finish } = useMissionTrace(() => {
     const eyePoint = liveGaze(eye);
@@ -32,6 +34,7 @@ export function Mission2Screen() {
       focused: !!gaze && gaze.distance <= trailRadius,
       saccade: !!gaze && eye.saccadeDetected,
       excessive: !!gaze && eye.saccadeDetected && gaze.distance > trailRadius * 2,
+      distractor: visibleDistractor.current,
       trail: steering.current && captures.current < checkpoints.length ? {
         deviationPct: Math.max(0, hand.distance - trailRadius) / Math.hypot(trailWidth, trailHeight) * 100,
         eyeLeadPct: gaze && gaze.distance <= trailRadius * 2 && hand.distance <= trailRadius * 2
@@ -41,11 +44,35 @@ export function Mission2Screen() {
     };
   }, 'steady-path');
 
-  const { timeLeft, deadline } = useMissionClock(() => {
+  const { timeLeft, deadline, endEarly } = useMissionClock(() => {
     completeComet(finish(), captures.current);
     playSound('win');
     nextStep();
   });
+
+  useEffect(() => {
+    let timer: number;
+    let previousSpot = -1;
+    function schedule() {
+      timer = window.setTimeout(() => {
+        if (performance.now() >= deadline.current) return;
+        const count = distractorSpots.length;
+        previousSpot = previousSpot < 0
+          ? Math.floor(Math.random() * count)
+          : (previousSpot + 1 + Math.floor(Math.random() * (count - 1))) % count;
+        const next = distractorSpots[previousSpot];
+        visibleDistractor.current = next;
+        setDistractor(next);
+        timer = window.setTimeout(() => {
+          visibleDistractor.current = undefined;
+          setDistractor(undefined);
+          schedule();
+        }, 220 + Math.random() * 320);
+      }, 380 + Math.random() * 1500);
+    }
+    schedule();
+    return () => window.clearTimeout(timer);
+  }, [deadline]);
 
   function move(dx: number, dy: number, source: InputSource) {
     if (!deadline.current || performance.now() >= deadline.current || captures.current === checkpoints.length) return;
@@ -61,7 +88,8 @@ export function Mission2Screen() {
       event({ kind: 'star-caught', source });
       captures.current++;
       setCollected(captures.current);
-      playSound('hit');
+      if (captures.current === checkpoints.length) endEarly.current();
+      else playSound('hit');
     }
   }
 
@@ -98,6 +126,8 @@ export function Mission2Screen() {
           <span key={index} className="steady-star" data-next={index === collected} aria-hidden="true"
             style={{ left: `${star.x * 100}%`, top: `${star.y * 100}%` }}>✦</span>
         ))}
+        {distractor && <span className="steady-star steady-distractor" aria-hidden="true"
+          style={{ left: `${distractor.x * 100}%`, top: `${distractor.y * 100}%` }}>✦</span>}
         <div className="training-ship" data-in-path={onTrail} aria-hidden="true"
           style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%` }}>
           <PixelSprite name="ship" size={6} />
@@ -105,7 +135,7 @@ export function Mission2Screen() {
       </div>
       <div className="training-footer">
         <p className="input-hint">Use the joystick or arrows, or drag to steer.</p>
-        <p role="status">{collected === checkpoints.length ? 'Trail complete!' : !onTrail ? 'Guide your ship back to the trail.' : ''}</p>
+        <p role="status">{!onTrail ? 'Guide your ship back to the trail.' : ''}</p>
       </div>
     </section>
   );
