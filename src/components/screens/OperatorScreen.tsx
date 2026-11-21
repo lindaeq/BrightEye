@@ -154,13 +154,20 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
                 <p className="input-hint">Age band {run.ageGroup || 'unavailable'} · Input {inputs.join(' + ') || 'none recorded'}</p>
                 <dl className="operator-metrics">
                   <div><dt>Targets hit</dt><dd>{stats.hits} / {stats.shots} shots</dd></div>
-                  <div><dt>Decoy hits</dt><dd>{stats.decoys}</dd></div>
+                  <div><dt>{run.target.game === 'odd-corners' ? 'Wrong-corner clicks' : 'Decoy hits'}</dt><dd>{stats.decoys}</dd></div>
+                  {run.target.game === 'odd-corners' && <div><dt>Median flash-to-gaze</dt><dd>{stats.gazeLatencyMedian === null ? '—' : Math.round(stats.gazeLatencyMedian) + ' ms'}</dd></div>}
                   <div><dt>Median target-to-hit</dt><dd>{stats.median === null ? '—' : Math.round(stats.median) + ' ms'}</dd></div>
                   <div><dt>Stars caught</dt><dd>{stats.stars}</dd></div>
-                  <div><dt>Path efficiency</dt><dd>{percent(stats.pathEfficiency)}</dd></div>
-                  <div><dt>Path deviation</dt><dd>{percent(stats.pathDeviation)}</dd></div>
-                  <div><dt>Mean heading change</dt><dd>{stats.meanTurnDegrees === null ? '—' : stats.meanTurnDegrees.toFixed(1) + '°'}</dd></div>
-                  <div><dt>Active stick change</dt><dd>{percent(stats.stickChange)}</dd></div>
+                  {run.comet.game === 'steady-path' ? <>
+                    <div><dt>Mean off-trail deviation</dt><dd>{percent(stats.trailDeviation)}</dd></div>
+                    <div><dt>Joystick jitter</dt><dd>{percent(stats.joystickJitter)}</dd></div>
+                    <div><dt>Median gaze lead</dt><dd>{percent(stats.eyeHandLead)}</dd></div>
+                  </> : <>
+                    <div><dt>Path efficiency</dt><dd>{percent(stats.pathEfficiency)}</dd></div>
+                    <div><dt>Path deviation</dt><dd>{percent(stats.pathDeviation)}</dd></div>
+                    <div><dt>Mean heading change</dt><dd>{stats.meanTurnDegrees === null ? '—' : stats.meanTurnDegrees.toFixed(1) + '°'}</dd></div>
+                    <div><dt>Active stick change</dt><dd>{percent(stats.stickChange)}</dd></div>
+                  </>}
                   <div><dt>Visual focus rate</dt><dd>{percent(stats.visualFocusPct)}</dd></div>
                   <div><dt>Excessive gaze samples</dt><dd>{stats.excessiveCount ?? '—'}</dd></div>
                   <div><dt>Mean gaze error</dt><dd>{percent(stats.meanGazeDeviationPct)}</dd></div>
@@ -176,7 +183,9 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
           <section className="operator-panel">
             <h2>How to read this</h2>
             <ul className="measurement-notes">
-              <li><b>Target-to-hit</b> measures elapsed time from a round target appearing to a successful shot. Aiming and pressing are included.</li>
+              <li><b>Target-to-hit</b> measures time from the targets appearing to a correct selection. Flash-to-gaze uses the first live gaze sample that enters the correct corner.</li>
+              <li><b>Off-trail deviation</b> measures distance beyond the trail edge as a percentage of the arena diagonal. <b>Joystick jitter</b> measures short-term changes in the active stick signal.</li>
+              <li><b>Gaze lead</b> measures how far ahead of or behind the ship the player looked, as a percentage of the trail. Negative values mean gaze was behind.</li>
               <li><b>Path efficiency</b> compares straight-line distance to traveled distance. <b>Path deviation</b> measures distance off the line to the star as a percentage of the arena diagonal. These use completed chases with continuous steering. Pointer runs can jump between positions, so those path values are omitted.</li>
               <li><b>Mean heading change</b> measures how sharply the ship turns between moving samples on completed chases.</li>
               <li><b>Active stick change</b> measures short-step movement in the controller signal while the stick is displaced. It includes deliberate corrections and hardware noise.</li>

@@ -368,3 +368,58 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   height: 0.5rem;
   accent-color: #79dfbd;
 }
+.odd-arena {
+  background:
+    linear-gradient(transparent calc(50% - 1px), #9770c733 50%, transparent calc(50% + 1px)),
+    linear-gradient(90deg, transparent calc(50% - 1px), #9770c733 50%, transparent calc(50% + 1px)),
+    var(--fld);
+}
+.odd-corner, .game-crosshair, .steady-star {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+.odd-corner {
+  display: grid;
+  place-items: center;
+  width: clamp(60px, 14vw, 110px);
+  height: clamp(60px, 14vw, 110px);
+  border-radius: 50%;
+  background: transparent;
+  border: 0;
+  color: #c9a0e8;
+  font-size: clamp(3rem, 9vw, 6rem);
+  line-height: 1;
+  text-shadow: 0 0 16px currentColor;
+  cursor: pointer;
+}
+.odd-corner[data-odd='true'] { color: #fff082; }
+.game-crosshair {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 2px var(--page);
+  pointer-events: none;
+}
+.steady-trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.steady-trail .steady-corridor, .replay-arena .steady-corridor {
+  fill: none;
+  stroke: #64e4bd26;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.steady-trail .steady-dots, .replay-arena .steady-dots {
+  fill: none;
+  stroke: #94ffe1;
+  stroke-width: 4px;
+  stroke-dasharray: 0.5 11;
+  stroke-linecap: round;
+}
+.steady-star {
+  color: var(--pink);
+  font-size: clamp(1.1rem, 4vw, 2rem);
+  line-height: 1;
+  pointer-events: none;
+}
+.steady-star[data-next='true'] { color: #fff082; text-shadow: 0 0 12px #fff082; }
+.replay-arena .odd-corner { width: auto; height: auto; font-size: clamp(1rem, 4vw, 2.3rem); pointer-events: none; }

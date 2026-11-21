@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useArcadeController } from '../context/ArcadeController';
 import type { InputSource, MissionTrace, RunEvent, TraceFrame } from './runTelemetry';
 
-export function useMissionTrace(readGame: () => Omit<TraceFrame, 'ms' | 'stick'> | null) {
+export function useMissionTrace(readGame: () => Omit<TraceFrame, 'ms' | 'stick'> | null, game?: MissionTrace['game']) {
   const { input, mouseMode, status } = useArcadeController();
   const read = useRef(readGame);
   read.current = readGame;
@@ -26,11 +26,11 @@ export function useMissionTrace(readGame: () => Omit<TraceFrame, 'ms' | 'stick'>
   useEffect(() => {
     start.current = performance.now();
     finished.current = false;
-    trace.current = { frames: [], events: [], inputs: [] };
+    trace.current = { game, frames: [], events: [], inputs: [] };
     sample(0);
     const timer = window.setInterval(() => sample(performance.now() - start.current), 40);
     return () => window.clearInterval(timer);
-  }, [sample]);
+  }, [game, sample]);
 
   const event = useCallback((record: Omit<RunEvent, 'ms'>) => {
     if (finished.current) return;

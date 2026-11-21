@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import type { Mission, RunTelemetry, Point, TraceFrame } from '../../utils/runTelemetry';
+import { corners, quadrant, trailPoints, trailWidth, trailHeight, trailRadius } from '../../utils/missionGames';
 
 const eventLabel = {
   'target-hit': 'Target hit',
@@ -18,7 +19,7 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
   const [fullTrail, setFullTrail] = useState(true); // Default to full trail so paths are immediately visible!
 
   const playing = playStart !== null;
-  const { frames, events } = run[mission];
+  const { frames, events, game } = run[mission];
   const duration = frames[frames.length - 1]?.ms ?? 0;
   const durationMs = Math.ceil(duration);
 
@@ -114,7 +115,7 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
             aria-pressed={mission === 'target'}
             onClick={() => chooseMission('target')}
           >
-            Stage 1: Target Lock
+            {run.target.game === 'odd-corners' ? 'Odd-One-Out Corners' : 'Target Lock'}
           </button>
           <button
             type="button"
@@ -122,7 +123,7 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
             aria-pressed={mission === 'comet'}
             onClick={() => chooseMission('comet')}
           >
-            Stage 2: Comet Tunnel
+            {run.comet.game === 'steady-path' ? 'Steady Path' : 'Comet Tunnel'}
           </button>
         </div>
       </div>
@@ -131,6 +132,16 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
         <>
           {/* Dual-Stream Arena Container */}
           <div className="replay-arena" aria-hidden="true" style={{ position: 'relative', overflow: 'hidden' }}>
+            {game === 'steady-path' && (
+              <svg viewBox={`0 0 ${trailWidth} ${trailHeight}`} preserveAspectRatio="none">
+                <polyline className="steady-corridor" points={trailPoints} style={{ strokeWidth: trailRadius * 2 }} />
+                <polyline className="steady-dots" points={trailPoints} />
+              </svg>
+            )}
+            {game === 'odd-corners' && corners.map((corner, index) => (
+              <span key={corner.label} className="odd-corner" data-odd={quadrant(frame.target) === index}
+                style={{ left: `${corner.x * 100}%`, top: `${corner.y * 100}%` }}>✦</span>
+            ))}
             {/* SVG Path Layer (Normalized 0-100 coordinates) */}
             <svg
               viewBox="0 0 100 100"
@@ -179,7 +190,7 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
             </svg>
 
             {/* Target Marker (Where gaze and hand need to be) */}
-            <span
+            {game !== 'odd-corners' && <span
               className="replay-target"
               data-kind={frame.target.kind}
               style={{
@@ -191,7 +202,7 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
               }}
             >
               {frame.target.kind === 'star' ? '✦' : ''}
-            </span>
+            </span>}
 
             {/* Hand / Joystick Marker (Pink Ring) */}
             {showHandPath && (
@@ -421,7 +432,9 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
               <span style={{ color: 'var(--pink)', display: 'block', fontSize: '0.72rem', textTransform: 'uppercase' }}>
                 Event At Scrubber
               </span>
-              <strong>{latestEvent ? eventLabel[latestEvent.kind] : 'Normal Tracking'}</strong>
+              <strong>{latestEvent
+                ? game === 'odd-corners' && latestEvent.kind === 'decoy-hit' ? 'Wrong corner' : eventLabel[latestEvent.kind]
+                : 'No event yet'}</strong>
             </div>
           </div>
         </>

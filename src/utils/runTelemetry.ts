@@ -11,6 +11,7 @@ export type TraceFrame = {
   saccade?: boolean;            // Rapid saccadic jump
   focused?: boolean;            // True if gaze is actively focused on needed game target
   excessive?: boolean;          // True if eye movement is excessive, wandering, or on decoy
+  trail?: { deviationPct: number; eyeLeadPct?: number; joystick: boolean };
 };
 
 export type RunEvent = {
@@ -18,10 +19,12 @@ export type RunEvent = {
   kind: 'target-hit' | 'decoy-hit' | 'miss' | 'star-caught';
   latencyMs?: number;
   eyeToHandMs?: number;
+  gazeLatencyMs?: number;
   source: InputSource;
 };
 
 export type MissionTrace = {
+  game?: 'odd-corners' | 'steady-path';
   frames: TraceFrame[];
   events: RunEvent[];
   inputs: InputSource[];
@@ -60,6 +63,29 @@ export function summarizeRun(run: RunTelemetry) {
   const hits = shots.filter((event) => event.kind === 'target-hit');
   const median = medianOf(hits.flatMap((event) => event.latencyMs === undefined ? [] : [event.latencyMs]));
   const eyeToHandMedian = medianOf(hits.flatMap((event) => event.eyeToHandMs === undefined ? [] : [event.eyeToHandMs]));
+  const gazeLatencyMedian = medianOf(shots.flatMap((event) => event.gazeLatencyMs === undefined ? [] : [event.gazeLatencyMs]));
+  const steadyPath = run.comet.game === 'steady-path';
+  const trailFrames = run.comet.frames.flatMap((frame) => frame.trail ? [frame.trail] : []);
+  const trailDeviation = trailFrames.length
+    ? trailFrames.reduce((sum, frame) => sum + frame.deviationPct, 0) / trailFrames.length : null;
+  const eyeHandLead = medianOf(trailFrames.flatMap((frame) => frame.eyeLeadPct === undefined ? [] : [frame.eyeLeadPct]));
+  let jitterSquares = 0;
+  let jitterSamples = 0;
+  if (steadyPath) {
+    const frames = run.comet.frames;
+    for (let i = 2; i < frames.length; i++) {
+      const [first, middle, last] = [frames[i - 2], frames[i - 1], frames[i]];
+      const a = first.stick, b = middle.stick, c = last.stick;
+      const before = middle.ms - first.ms, after = last.ms - middle.ms;
+      if (!a || !b || !c || !first.trail?.joystick || !middle.trail?.joystick || !last.trail?.joystick ||
+        before < 25 || before > 65 || after < 25 || after > 65 ||
+        Math.min(Math.hypot(a.x, a.y), Math.hypot(b.x, b.y), Math.hypot(c.x, c.y)) <= 0.2) continue;
+      const fraction = before / (before + after);
+      jitterSquares += (b.x - (a.x + (c.x - a.x) * fraction)) ** 2 +
+        (b.y - (a.y + (c.y - a.y) * fraction)) ** 2;
+      jitterSamples++;
+    }
+  }
 
   // Each capture closes a leg. Frames at the capture timestamp keep the old star.
   const captures = run.comet.events.filter((event) => event.kind === 'star-caught');
@@ -139,7 +165,7 @@ export function summarizeRun(run: RunTelemetry) {
   const visualFocusPct = totalEyeFrames > 0 ? (focusedFrames / totalEyeFrames) * 100 : null;
   const meanGazeDeviationPct = totalEyeFrames > 0 ? (gazeDeviationSum / totalEyeFrames / Math.SQRT2) * 100 : null;
 
-  const continuousSteering = !run.comet.inputs.includes('pointer');
+  const continuousSteering = !steadyPath && !run.comet.inputs.includes('pointer');
   return {
     hits: hits.length,
     shots: shots.length,
@@ -155,6 +181,10 @@ export function summarizeRun(run: RunTelemetry) {
     excessiveCount: totalEyeFrames ? excessiveCount : null,
     meanGazeDeviationPct,
     eyeToHandMedian,
+    gazeLatencyMedian,
+    trailDeviation,
+    eyeHandLead,
+    joystickJitter: jitterSamples > 0 ? Math.sqrt(jitterSquares / jitterSamples) * 50 : null,
     hasEyeData: totalEyeFrames > 10,
   };
 }
@@ -164,7 +194,9 @@ export function downloadRunSummaries(runs: RunTelemetry[]) {
     'Run', 'Ended (UTC)', 'Age band', 'Inputs', 'Hits', 'Shots', 'Decoy hits', 'Median target-to-hit (ms)',
     'Stars caught', 'Path efficiency (%)', 'Path deviation (% arena diagonal)', 'Mean heading change (degrees)',
     'Active stick change (% full axis range)', 'Visual focus (%)', 'Excessive gaze samples',
-    'Mean gaze error (% arena diagonal)', 'Median eye-to-hand (ms)',
+    'Mean gaze error (% arena diagonal)', 'Median eye-to-hand (ms)', 'Median flash-to-gaze (ms)',
+    'Mean off-trail deviation (% arena diagonal)', 'Joystick jitter (% full axis range)',
+    'Median gaze lead (% of trail)', 'Stage 1 game', 'Stage 2 game',
   ];
   const rows = runs.map((run) => {
     const stats = summarizeRun(run);
@@ -187,6 +219,12 @@ export function downloadRunSummaries(runs: RunTelemetry[]) {
       stats.excessiveCount,
       stats.meanGazeDeviationPct?.toFixed(1),
       stats.eyeToHandMedian,
+      stats.gazeLatencyMedian,
+      stats.trailDeviation?.toFixed(2),
+      stats.joystickJitter?.toFixed(2),
+      stats.eyeHandLead?.toFixed(1),
+      run.target.game ?? 'target-lock',
+      run.comet.game ?? 'comet-tunnel',
     ];
   });
   const csv = [header, ...rows].map((row) => row.map((cell) => '"' + String(cell ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n');

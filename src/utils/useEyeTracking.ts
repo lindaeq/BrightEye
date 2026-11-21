@@ -8,6 +8,7 @@ export interface EyeTrackingData {
   saccadicIntrusions: number; // Counter of erratic micro-jumps (DCD index)
   velocity: number;          // Gaze velocity
   timestampMs: number;       // Deterministic QNX RTOS timestamp
+  receivedAt: number;        // Browser monotonic clock, shared with gameplay
   connected: boolean;        // True when connected to Raspberry Pi 5 QNX engine
 }
 
@@ -20,15 +21,21 @@ let cachedGaze: EyeTrackingData = {
   saccadicIntrusions: 0,
   velocity: 0,
   timestampMs: 0,
+  receivedAt: -Infinity,
   connected: false,
 };
+
+export function liveGaze(sample: EyeTrackingData) {
+  if (!sample.connected || sample.isBlinking || performance.now() - sample.receivedAt > 150) return null;
+  return { x: sample.gazeX, y: sample.gazeY };
+}
 
 export function useEyeTracking() {
   const [data, setData] = useState<EyeTrackingData>(cachedGaze);
   useEffect(() => {
     const lifetime = new AbortController();
     let timer: number;
-    let lastFrameAt = performance.now();
+    let lastFrameAt = cachedGaze.receivedAt;
     let timestamp = cachedGaze.timestampMs;
     async function poll() {
       try {
@@ -52,6 +59,7 @@ export function useEyeTracking() {
           saccadicIntrusions: typeof json.saccadicIntrusions === 'number' ? json.saccadicIntrusions : 0,
           velocity: typeof json.velocity === 'number' ? json.velocity : 0,
           timestampMs: timestamp,
+          receivedAt: lastFrameAt,
           connected: true,
         };
 
