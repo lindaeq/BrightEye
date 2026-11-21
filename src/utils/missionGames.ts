@@ -15,6 +15,10 @@ export function quadrant(point: Point, deadBand = 0) {
 }
 
 export const clampUnit = (value: number) => Math.max(0, Math.min(1, value));
+
+export function shipHeading(dx: number, dy: number, field: { width: number; height: number }) {
+  return Math.atan2(dy * field.height, dx * field.width) * 180 / Math.PI;
+}
 export const trailWidth = 1000;
 export const trailHeight = 500;
 export const trailRadius = 30;

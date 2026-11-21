@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { eyeTrackerEnabled } from '../../utils/useEyeTracking';
 
 const QNX_STREAM_URL = '/qnx/';
 const QNX_TELEMETRY_URL = '/qnx/telemetry';
@@ -34,8 +35,8 @@ export function useCameraFeed() {
       if (!unmounted) setIsQnx(false);
     }
 
-    checkQnxCamera();
-    const interval = setInterval(checkQnxCamera, 3000);
+    const interval = eyeTrackerEnabled ? window.setInterval(checkQnxCamera, 3000) : undefined;
+    if (eyeTrackerEnabled) void checkQnxCamera();
 
     return () => {
       unmounted = true;

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 
+declare const __QNX_TRACKER_ENABLED__: boolean;
+export const eyeTrackerEnabled = __QNX_TRACKER_ENABLED__;
+
 export interface EyeTrackingData {
   gazeX: number;             // Normalized 0.0 - 1.0 (0 = left, 1 = right)
   gazeY: number;             // Normalized 0.0 - 1.0 (0 = top, 1 = bottom)
@@ -33,6 +36,7 @@ export function liveGaze(sample: EyeTrackingData) {
 export function useEyeTracking() {
   const [data, setData] = useState<EyeTrackingData>(cachedGaze);
   useEffect(() => {
+    if (!eyeTrackerEnabled) return;
     const lifetime = new AbortController();
     let timer: number;
     let lastFrameAt = cachedGaze.receivedAt;
@@ -86,6 +90,7 @@ export function useEyeTracking() {
 }
 
 export async function sendEyeCalibration(bounds: { minX: number; maxX: number; minY: number; maxY: number }) {
+  if (!eyeTrackerEnabled) return;
   try {
     await fetch('/qnx/calibrate', {
       method: 'POST',

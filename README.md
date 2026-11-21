@@ -1,4 +1,4 @@
-# Hack Western 13 arcade
+# brighteyed
 
 ## 30-second gameplay
 
@@ -24,7 +24,7 @@ SELECT id, ended_at FROM public.arcade_runs ORDER BY ended_at DESC LIMIT 5;
 
 On the Pi, install Python packages `opencv-python`, `numpy`, and `flask` in your Python environment. Run `python3 kiosk_eyetrack.py` with the camera attached. The tracker serves live gaze telemetry and a camera preview on port 8080.
 
-If Vite runs on a different computer, set `QNX_TRACKER_URL` to `http://<pi-ip>:8080` before starting Vite. In PowerShell, use `$env:QNX_TRACKER_URL = 'http://<pi-ip>:8080'`. When both services run on the Pi, Vite uses port 8080 on localhost by default.
+To enable eye tracking, set `QNX_TRACKER_URL` before starting Vite. In PowerShell, use `$env:QNX_TRACKER_URL = 'http://<pi-ip>:8080'`. Use `http://127.0.0.1:8080` when Vite runs on the Pi. Leave the variable unset to play and save runs without the tracker.
 
 Check **Operator → Hardware diagnostics → Eye tracker** for the connection status. Complete a run to see its gaze metrics and path in Operator. Runs saved before eye tracking still replay in the same history. Tiger stores gaze samples in the existing mission trace columns.
 

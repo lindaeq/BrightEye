@@ -11,6 +11,7 @@ import { Mission1Screen } from './components/screens/Mission1Screen';
 import { Mission2Screen } from './components/screens/Mission2Screen';
 import { ResultsScreen } from './components/screens/ResultsScreen';
 import { OperatorScreen } from './components/screens/OperatorScreen';
+import { StageIntro } from './components/common/StageIntro';
 
 const stages = ['profile', 'warmup', 'howto', 'mission1', 'mission2', 'results'];
 const screens = {
@@ -27,6 +28,7 @@ export function AppContent() {
   const home = stepId === 'start';
   const operator = stepId === 'operator';
   const Screen = home || operator ? null : screens[stepId];
+  const intro = stepId === 'howto' ? 'practice' : stepId === 'mission1' || stepId === 'mission2' ? stepId : null;
   const stage = stages.indexOf(stepId);
   const scene = useRef<HTMLDivElement>(null);
   const hardwareReady = camera.ready && !!controller.status.source && controller.status.joystick && controller.status.button;
@@ -50,7 +52,7 @@ export function AppContent() {
   return (
     <div className="arcade-shell">
       <header className="arcade-hud">
-        <span className="arcade-brand"><PixelSprite name="inv" size={2} /> AeroNeuro</span>
+        <span className="arcade-brand"><PixelSprite name="inv" size={2} /> brighteyed</span>
         {stage >= 0 && (
           <div className="flight-progress" role="progressbar" aria-label="Flight progress"
             aria-valuemin={0} aria-valuemax={stages.length} aria-valuenow={stage + 1}>
@@ -73,7 +75,7 @@ export function AppContent() {
       </header>
       <main className="arcade-display" data-home={home} data-camera-inline={inlinePreview}>
         <div key={stepId} ref={scene} tabIndex={-1} className="arcade-scene">
-          {Screen && <Screen />}
+          {Screen && (intro ? <StageIntro stage={intro}><Screen /></StageIntro> : <Screen />)}
           {operator && <OperatorScreen cameraReady={camera.ready} />}
           {home && (
             <section className="launch-screen">
