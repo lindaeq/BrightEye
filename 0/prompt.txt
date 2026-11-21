@@ -1,0 +1,51 @@
+hello
+
+---
+
+whats in my project?
+
+---
+
+push it to main
+
+---
+
+based on this description, set up a basic web app that has the framework for these features (dont implement it yet) but set up the basic requirements and screens
+
+The One-Liner: A 30-second space arcade kiosk powered by QNX RTOS that measures visual reaction time (eyes) vs. motor execution & tremor (hand) to screen for hidden pediatric conditions like Developmental Coordination Disorder (DCD/Dyspraxia), ADHD, and youth concussions.
+Prize Tracks You Qualify For:
+Best Use of QNX ($1,000): Deterministic real-time OS accurately timestamps sub-200ms saccadic eye movements and motor latency without OS jitter, keeping pediatric video 100% offline.
+Best Health Hack by Sun Life ($100 Amazon GC each): Turns an expensive clinical eye-hand coordination exam into an accessible, kid-friendly game for schools, rural clinics, and youth sports sidelines.
+Organizers Choice: Most Adventurous / Best Hardware Prototype: Custom tactile arcade deck built on Arduino Uno Q + QNX vision.
+The 30-Second Gameplay Loop (What Judges Actually Play)
+Keep the demo to two crisp 15-second mini-games back-to-back so anyone walking up gets an instant score:
+Stage 1: "Target Lock" (15s) — Eye-to-Hand Latency & Impulse Control
+What happens: Glowing alien targets pop up randomly on screen (sometimes with a red "decoy" flash that you have to ignore—testing ADHD impulse control).
+What your hardware measures:
+QNX Camera detects the exact millisecond the player's eyes/gaze snap to the new target (t_eye).
+Joystick detects when the player steers the crosshair onto the target and clicks (t_hand).
+Live Feedback: The 7-segment digit display flashes the player's Eye-to-Hand Reaction Gap in ms (e.g., 240) after every hit, and the buzzer gives a crisp arcade chime.
+Stage 2: "Asteroid Tunnel" (15s) — Smooth Pursuit & Motor Tremor Check
+What happens: A comet moves smoothly across the screen while the player keeps their eyes locked on it AND guides their ship through a narrow corridor with the joystick.
+What your hardware measures:
+QNX Camera checks if the eyes follow smoothly or make jerky catch-up jumps (saccadic intrusions).
+Joystick measures high-frequency micro-shaking (intention tremor / DCD motor jitter) and path deviation.
+End-of-Run "Neuro-Motor Card" (5s):
+Screen displays three simple scores + a kid-friendly status bar:
+Visual Focus & Impulse Score: e.g., 92/100
+Eye-to-Hand Latency: e.g., 235 ms
+Motor Steadiness (Tremor Index): e.g., Low Jitter (94%)
+Clean Hardware & Code Split (Divide & Conquer Tonight)
+Subsystem
+Runs On
+What It Actually Does
+Vision & Timing Engine
+Raspberry Pi 5 (QNX OS)
+Captures camera frames, runs lightweight QNX face/eye-center landmark detection, timestamps gaze coordinates (gx, gy) with QNX's real-time clock, and sends simple CSV/JSON packets over USB Serial (115200 baud).
+Arcade UI & Telemetry
+Arduino Uno Q + Screen
+Reads incoming gaze coords + Joystick (jx, jy, btn), renders the space game on the screen, computes t_hand - t_eye and joystick jitter variance, updates the 7-segment digit display (ms timer/score), and triggers buzzer sound effects.
+
+---
+
+use this design and static html for the project. but fix the ui to be more intuitive and better layout. also add in the non-static elements and improve spacing for the actual web app

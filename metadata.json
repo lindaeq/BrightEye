@@ -1,0 +1,73 @@
+{
+  "cli_version": "0.13.4",
+  "checkpoint_id": "01M7YCECXMGAGGMZR19S9BFZCV",
+  "strategy": "manual-commit",
+  "branch": "frontend-setup",
+  "checkpoints_count": 5,
+  "files_touched": [
+    ".gitignore",
+    "README.md",
+    "index.html",
+    "package-lock.json",
+    "package.json",
+    "postcss.config.js",
+    "src/App.tsx",
+    "src/components/common/BottomDial.tsx",
+    "src/components/common/Navbar.tsx",
+    "src/components/common/PixelSprite.tsx",
+    "src/components/common/TopBar.tsx",
+    "src/components/debug/TelemetryDrawer.tsx",
+    "src/components/screens/AttractScreen.tsx",
+    "src/components/screens/CalibrationScreen.tsx",
+    "src/components/screens/HowToScreen.tsx",
+    "src/components/screens/Mission1Screen.tsx",
+    "src/components/screens/Mission2Screen.tsx",
+    "src/components/screens/NeuroMotorCard.tsx",
+    "src/components/screens/OperatorScreen.tsx",
+    "src/components/screens/ProfileScreen.tsx",
+    "src/components/screens/ResultsScreen.tsx",
+    "src/components/screens/Stage1TargetLock.tsx",
+    "src/components/screens/Stage2AsteroidTunnel.tsx",
+    "src/components/screens/StartScreen.tsx",
+    "src/components/screens/StyleScreen.tsx",
+    "src/components/screens/WarmupScreen.tsx",
+    "src/context/ArcadeContext.tsx",
+    "src/context/GameContext.tsx",
+    "src/index.css",
+    "src/main.tsx",
+    "src/types/telemetry.ts",
+    "src/utils/audio.ts",
+    "tailwind.config.js",
+    "tsconfig.json",
+    "vite.config.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 310158,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 4488585,
+    "output_tokens": 82687,
+    "api_call_count": 86
+  },
+  "redaction": {
+    "replacements": 0,
+    "layers": {
+      "betterleaks": 0,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 0,
+      "credentialed_uri": 0,
+      "entropy": 0,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  }
+}
