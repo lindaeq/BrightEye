@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useArcade } from '../../context/ArcadeContext';
 import { useArcadeController } from '../../context/ArcadeController';
 import { downloadRunSummaries, summarizeRun, type RunTelemetry } from '../../utils/runTelemetry';
 import { RunReplay } from '../common/RunReplay';
+import { RunCharts } from '../common/RunCharts';
 import { BuzzAnalysis } from '../common/BuzzAnalysis';
 import { useEyeTracking } from '../../utils/useEyeTracking';
+import { getRunReview } from '../../utils/runOutliers';
+import { summarizeRunForOperator } from '../../utils/runSummary';
 
-function percent(value: number | null) {
-  return value === null ? '—' : value.toFixed(1) + '%';
+function measurement(value: number | null, unit: string, decimals = 0) {
+  return value === null ? '—' : value.toFixed(decimals) + unit;
 }
 
 export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
@@ -29,6 +32,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
   const pendingRun = pendingRuns.find(({ id }) => id === currentId);
   const savedId = pendingRun ? undefined : currentId;
   const run = pendingRun ?? (loadedRun?.id === savedId ? loadedRun : undefined);
+  const review = useMemo(() => run && getRunReview(run), [run]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -96,7 +100,9 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
       setExporting(false);
     }
   }
-  const stats = run && summarizeRun(run);
+  const stats = useMemo(() => run && summarizeRun(run), [run]);
+  const observations = useMemo(() => run && stats && review
+    ? summarizeRunForOperator(run, stats, review) : [], [run, stats, review]);
   const inputs = run ? [...new Set([...run.target.inputs, ...run.comet.inputs])] : [];
   const checks = [
     ['Eye tracker', eye.connected],
@@ -106,23 +112,72 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
     ['Action button', status.button],
   ] as const;
 
+  const metrics = run && stats ? [
+    { label: 'Response', rows: [
+      ['Median flash-to-click', 'Time from target appearance to a correct selection.', measurement(stats.median, ' ms')],
+      ['Median flash-to-gaze', 'Time from the flash to the first live gaze sample entering the correct corner.', measurement(stats.gazeLatencyMedian, ' ms')],
+      ['Median gaze-to-click', 'Time from that gaze sample to a correct selection.', measurement(stats.eyeToHandMedian, ' ms')],
+      ['Correct selections', 'Correct selections out of all attempts.', `${stats.hits} / ${stats.shots}`],
+      [run.target.game === 'odd-corners' ? 'Wrong-corner clicks' : 'Decoy hits', 'Selections on a distractor.', stats.decoys],
+    ] },
+    { label: 'Movement', rows: [
+      ['Stars caught', 'Stars collected during the movement stage.', stats.stars],
+      ...(run.comet.game === 'steady-path' ? [
+        ['Mean off-trail deviation', 'Average distance beyond the trail edge, as a percentage of the arena diagonal.', measurement(stats.trailDeviation, '%', 1)],
+        ['Joystick jitter', 'Short-term variation in the active stick signal, as a percentage of full axis range.', measurement(stats.joystickJitter, '%', 1)],
+        ['Median gaze lead', 'How far gaze was ahead of or behind the ship, as a percentage of the trail length.', measurement(stats.eyeHandLead, '%', 1)],
+      ] : [
+        ['Path efficiency', 'Straight-line distance divided by distance traveled on completed chases.', measurement(stats.pathEfficiency, '%', 1)],
+        ['Path deviation', 'Average distance from the direct route to the star, as a percentage of the arena diagonal.', measurement(stats.pathDeviation, '%', 1)],
+        ['Mean heading change', 'Average turn angle between moving samples on completed chases.', measurement(stats.meanTurnDegrees, '°', 1)],
+        ['Active stick change', 'Short-step changes while the joystick is displaced, as a percentage of full axis range.', measurement(stats.stickChange, '%', 1)],
+      ]),
+    ] },
+    { label: 'Gaze', rows: [
+      ['Visual focus rate', 'Share of gaze samples within the stage’s focus area.', measurement(stats.visualFocusPct, '%', 1)],
+      ['Excessive gaze samples', 'Gaze samples flagged by the game for movement away from the target or trail.', stats.excessiveCount ?? '—'],
+      ['Mean gaze error', 'Average distance from gaze to the active target, as a percentage of the arena diagonal.', measurement(stats.meanGazeDeviationPct, '%', 1)],
+    ] },
+  ] : [];
+  const reviewRows = review ? ([
+    ['Eye–hand separation', review.separation.flags],
+    ['Off-trail deviation', review.deviation.flags],
+    ['Flash-to-click time', review.response.flags],
+  ] as const).flatMap(([label, flags]) => {
+    const large = flags.filter((flag) => flag === 'large').length;
+    const unusual = flags.filter((flag) => flag === 'unusual').length;
+    return large || unusual ? [{ label, large, unusual }] : [];
+  }) : [];
+  const sections = [
+    { id: 'history', label: 'Run history' },
+    ...(run ? [
+      { id: 'summary', label: 'Run recap' },
+      { id: 'replay', label: 'Motion replay' },
+      { id: 'graphs', label: 'Graphs' },
+      { id: 'measurements', label: 'Measurements' },
+    ] : []),
+    { id: 'hardware', label: 'Hardware' },
+  ];
+
   return (
     <section className="operator-screen">
       <header className="operator-panel-heading">
         <h1>Operator dashboard</h1>
         <div className="operator-actions">
-          <button type="button" className="arcade-btn alt" disabled={!runs.length || exporting}
-            onClick={exportRuns}>Export summary CSV</button>
-          <button type="button" className="arcade-btn alt" onClick={() => goToStep('start')}>Home</button>
+          <button type="button" className="arcade-btn operator-action" data-accent="export" disabled={!runs.length || exporting}
+            onClick={exportRuns}>{exporting ? 'Exporting…' : 'Export summary CSV'}</button>
+          <button type="button" className="arcade-btn operator-action" data-accent="home" onClick={() => goToStep('start')}>Home</button>
         </div>
       </header>
-      <div className="operator-columns">
-        <div className="operator-main">
-          <section className="operator-panel">
+      <div className="operator-layout">
+        <nav className="operator-rail" aria-label="Operator sections">
+          {sections.map(({ id, label }) => <a key={id} href={`#operator-${id}`} data-section={id}>{label}</a>)}
+        </nav>
+        <div className="operator-content">
+          <section id="operator-history" data-section="history" className="operator-runbar operator-section" aria-label="Run history">
             <div className="operator-panel-heading">
-              <h2>Run history</h2>
               {runs.length > 0 && (
-                <label>Run <select value={currentId} disabled={deleting} onChange={(event) => {
+                <label>Run history <select value={currentId} disabled={deleting} onChange={(event) => {
                   setSelectedId(event.target.value);
                   setActionError('');
                 }}>
@@ -131,79 +186,73 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
                   </option>)}
                 </select></label>
               )}
-              {savedId && <button type="button" className="arcade-btn alt" disabled={deleting}
-                onClick={deleteRun}>{deleting ? 'Deleting…' : 'Delete run'}</button>}
-              {pendingRun && <button type="button" className="arcade-btn alt"
-                onClick={() => uploadRun(pendingRun)}>Retry upload</button>}
+              <div className="operator-actions">
+                <button type="button" className="arcade-btn operator-action" data-accent="refresh" disabled={loading || deleting}
+                  onClick={() => setRefresh((previous) => previous + 1)}>Refresh runs</button>
+                {savedId && <button type="button" className="arcade-btn operator-action" data-accent="delete" disabled={deleting}
+                  onClick={deleteRun}>{deleting ? 'Deleting…' : 'Delete run'}</button>}
+                {pendingRun && <button type="button" className="arcade-btn operator-action" data-accent="retry"
+                  onClick={() => uploadRun(pendingRun)}>Retry upload</button>}
+              </div>
             </div>
-            {(loadError || detailError) && <p role="alert">{loadError || detailError}{' '}
-              <button type="button" className="arcade-btn alt" onClick={() => setRefresh((previous) => previous + 1)}>
-                Reload runs
-              </button>
-            </p>}
-            {actionError && <p role="alert">{actionError}</p>}
+            {(loadError || detailError || actionError) && <p role="alert">{loadError || detailError || actionError}</p>}
             {!runs.length && !loadError && <p>{loading ? 'Loading saved runs…' : 'Complete both missions to save a run.'}</p>}
-            {savedId && !run && !detailError && <p>Loading replay…</p>}
+            {savedId && !run && !detailError && <p role="status">Loading run from Tiger Cloud…</p>}
+            {run && <p className="input-hint">{pendingRun ? 'Upload pending' : 'Saved in Tiger Cloud'}
+              {' · '}Age band {run.ageGroup || 'unavailable'} · Input {inputs.join(' + ') || 'none recorded'}</p>}
           </section>
-          {run && stats ? (
+          {run && review && (
             <>
-              <section className="operator-panel">
-                <div className="operator-panel-heading">
-                  <h2>Session measurements</h2>
-                </div>
-                <p className="input-hint">Age band {run.ageGroup || 'unavailable'} · Input {inputs.join(' + ') || 'none recorded'}</p>
-                <dl className="operator-metrics">
-                  <div><dt>Targets hit</dt><dd>{stats.hits} / {stats.shots} shots</dd></div>
-                  <div><dt>{run.target.game === 'odd-corners' ? 'Wrong-corner clicks' : 'Decoy hits'}</dt><dd>{stats.decoys}</dd></div>
-                  {run.target.game === 'odd-corners' && <div><dt>Median flash-to-gaze</dt><dd>{stats.gazeLatencyMedian === null ? '—' : Math.round(stats.gazeLatencyMedian) + ' ms'}</dd></div>}
-                  <div><dt>Median target-to-hit</dt><dd>{stats.median === null ? '—' : Math.round(stats.median) + ' ms'}</dd></div>
-                  <div><dt>Stars caught</dt><dd>{stats.stars}</dd></div>
-                  {run.comet.game === 'steady-path' ? <>
-                    <div><dt>Mean off-trail deviation</dt><dd>{percent(stats.trailDeviation)}</dd></div>
-                    <div><dt>Joystick jitter</dt><dd>{percent(stats.joystickJitter)}</dd></div>
-                    <div><dt>Median gaze lead</dt><dd>{percent(stats.eyeHandLead)}</dd></div>
-                  </> : <>
-                    <div><dt>Path efficiency</dt><dd>{percent(stats.pathEfficiency)}</dd></div>
-                    <div><dt>Path deviation</dt><dd>{percent(stats.pathDeviation)}</dd></div>
-                    <div><dt>Mean heading change</dt><dd>{stats.meanTurnDegrees === null ? '—' : stats.meanTurnDegrees.toFixed(1) + '°'}</dd></div>
-                    <div><dt>Active stick change</dt><dd>{percent(stats.stickChange)}</dd></div>
-                  </>}
-                  <div><dt>Visual focus rate</dt><dd>{percent(stats.visualFocusPct)}</dd></div>
-                  <div><dt>Excessive gaze samples</dt><dd>{stats.excessiveCount ?? '—'}</dd></div>
-                  <div><dt>Mean gaze error</dt><dd>{percent(stats.meanGazeDeviationPct)}</dd></div>
-                  <div><dt>Median eye-to-hand</dt><dd>{stats.eyeToHandMedian === null ? '—' : Math.round(stats.eyeToHandMedian) + ' ms'}</dd></div>
-                </dl>
+              <section id="operator-summary" data-section="summary" className="operator-run-summary operator-section" aria-label="Run recap">
+                <h2>Run recap</h2>
+                <ul>{observations.map((observation) => <li key={observation}>{observation}</li>)}</ul>
+                <p className="input-hint">Gaze timing includes polling and network delay. This game cannot assess whether a child needs a specialist.</p>
+                <details className="operator-care-note">
+                  <summary>When to ask a healthcare provider</summary>
+                  <p>If coordination or attention difficulties persist during everyday activities, at home or at school, bring those observations to your child’s primary care provider. They can help decide whether an assessment is appropriate. <a href="https://caringforkids.cps.ca/handouts/behavior-and-development/developmental-coordination-disorder" target="_blank" rel="noreferrer">Canadian Paediatric Society guidance</a></p>
+                </details>
               </section>
-              <RunReplay key={run.id} run={run} />
+              <div id="operator-replay" data-section="replay" className="operator-section"><RunReplay key={run.id} run={run} /></div>
+              <div id="operator-graphs" data-section="graphs" className="operator-section"><RunCharts run={run} review={review} /></div>
+              <section id="operator-measurements" data-section="measurements" className="operator-measurements operator-section">
+                <h2>Run measurements</h2>
+                <table>
+                  <thead><tr><th scope="col">Measurement</th><th scope="col">Description</th><th scope="col">Value</th></tr></thead>
+                  {reviewRows.length > 0 && <tbody>
+                    <tr><th className="operator-metric-group" scope="rowgroup" colSpan={3}>Samples to review</th></tr>
+                    {reviewRows.map(({ label, large, unusual }) => (
+                      <tr key={label} data-review={large ? 'large' : 'unusual'}>
+                        <th scope="row">{label}</th>
+                        <td>Higher than most samples in this run. See the outlined points in the graph.</td>
+                        <td><div className="run-review-counts">
+                          {large > 0 && <span data-review="large">{large} large</span>}
+                          {unusual > 0 && <span data-review="unusual">{unusual} unusual</span>}
+                        </div></td>
+                      </tr>
+                    ))}
+                  </tbody>}
+                  {metrics.map(({ label, rows }) => (
+                    <tbody key={label}>
+                      <tr><th className="operator-metric-group" scope="rowgroup" colSpan={3}>{label}</th></tr>
+                      {rows.map(([name, description, value]) => (
+                        <tr key={name}><th scope="row">{name}</th><td>{description}</td><td>{value}</td></tr>
+                      ))}
+                    </tbody>
+                  ))}
+                </table>
+              </section>
             </>
-          ) : null}
-          <BuzzAnalysis />
-        </div>
-        <aside className="operator-main">
-          <section className="operator-panel">
-            <h2>How to read this</h2>
-            <ul className="measurement-notes">
-              <li><b>Target-to-hit</b> measures time from the targets appearing to a correct selection. Flash-to-gaze uses the first live gaze sample that enters the correct corner.</li>
-              <li><b>Off-trail deviation</b> measures distance beyond the trail edge as a percentage of the arena diagonal. <b>Joystick jitter</b> measures short-term changes in the active stick signal.</li>
-              <li><b>Gaze lead</b> measures how far ahead of or behind the ship the player looked, as a percentage of the trail. Negative values mean gaze was behind.</li>
-              <li><b>Path efficiency</b> compares straight-line distance to traveled distance. <b>Path deviation</b> measures distance off the line to the star as a percentage of the arena diagonal. These use completed chases with continuous steering. Pointer runs can jump between positions, so those path values are omitted.</li>
-              <li><b>Mean heading change</b> measures how sharply the ship turns between moving samples on completed chases.</li>
-              <li><b>Active stick change</b> measures short-step movement in the controller signal while the stick is displaced. It includes deliberate corrections and hardware noise.</li>
-            </ul>
-            <p>These measurements can help you review timing and steering within the game. Developmental coordination disorder assessment uses standardized motor tests and considers how a child manages everyday activities.
-              {' '}<a href="https://doi.org/10.1111/dmcn.14132" target="_blank" rel="noreferrer">DCD clinical guidance</a>
-            </p>
-            <p className="input-hint">Saved runs include game telemetry and gaze coordinates when the eye tracker is connected. Camera video is never recorded.</p>
-          </section>
-          <section className="operator-panel">
-            <h2>Hardware diagnostics</h2>
+          )}
+          <details id="operator-hardware" data-section="hardware" className="operator-disclosure operator-section">
+            <summary>Hardware diagnostics</summary>
             <ul className="preflight-checks" aria-label="Equipment status">
               {checks.map(([label, ready]) => (
                 <li key={label} data-ready={ready}>{label} <b>{ready ? 'Ready' : 'Waiting'}</b></li>
               ))}
             </ul>
-          </section>
-        </aside>
+            <BuzzAnalysis />
+          </details>
+        </div>
       </div>
     </section>
   );

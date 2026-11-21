@@ -18,6 +18,11 @@ export function WarmupScreen() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [dwellProgress, setDwellProgress] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  useEffect(() => {
+    if (!isFinished) return;
+    const timer = window.setTimeout(nextStep, 700);
+    return () => window.clearTimeout(timer);
+  }, [isFinished, nextStep]);
 
   // Collected range calibration bounds
   const recordedPoints = useRef<{ x: number; y: number }[]>([]);
@@ -196,9 +201,7 @@ export function WarmupScreen() {
               Lock {currentTarget?.name}
             </button>
           )}
-          <button type="button" className="arcade-btn" onClick={nextStep}>
-            {isFinished ? 'Start Missions' : 'Skip Calibration'}
-          </button>
+          {!isFinished && <button type="button" className="arcade-btn" onClick={nextStep}>Skip Calibration</button>}
         </div>
       </div>
     </section>

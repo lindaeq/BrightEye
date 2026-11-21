@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { PixelSprite } from '../common/PixelSprite';
 import { useArcade } from '../../context/ArcadeContext';
-import { checkpoints, clampUnit, distractorSpots, projectOntoTrail, trail, trailDistance, trailHeight, trailPoints,
+import { checkpoints, clampUnit, distractorSpots, projectOntoTrail, shipHeading, trail, trailDistance, trailHeight, trailPoints,
   trailRadius, trailWidth } from '../../utils/missionGames';
 import { playSound } from '../../utils/audio';
 import type { InputSource, Point } from '../../utils/runTelemetry';
@@ -13,11 +13,12 @@ import { useMissionTrace } from '../../utils/useMissionTrace';
 export function Mission2Screen() {
   const { completeComet, nextStep } = useArcade();
   const eye = useEyeTracking();
+  const field = useRef<HTMLDivElement>(null);
   const ship = useRef(trail[0]);
   const captures = useRef(0);
   const steering = useRef<InputSource | undefined>(undefined);
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
-  const [position, setPosition] = useState(ship.current);
+  const [position, setPosition] = useState({ ...ship.current, heading: 0 });
   const [collected, setCollected] = useState(0);
   const [onTrail, setOnTrail] = useState(true);
   const [distractor, setDistractor] = useState<Point>();
@@ -82,7 +83,9 @@ export function Mission2Screen() {
     steering.current = source;
     markInput(source);
     ship.current = next;
-    setPosition(next);
+    const bounds = field.current?.getBoundingClientRect();
+    setPosition((position) => ({ ...next, heading: bounds
+      ? shipHeading(next.x - previous.x, next.y - previous.y, bounds) : position.heading }));
     setOnTrail(projectOntoTrail(next).distance <= trailRadius);
     if (trailDistance(next, checkpoints[captures.current]) <= trailRadius) {
       event({ kind: 'star-caught', source });
@@ -110,7 +113,7 @@ export function Mission2Screen() {
         <p className="beacon-count">{timeLeft}s · {collected}/{checkpoints.length} stars</p>
       </div>
       <p>Follow the glowing trail and collect the stars in order.</p>
-      <div className="training-field steady-arena" aria-label="Spaceship trail"
+      <div ref={field} className="training-field steady-arena" aria-label="Spaceship trail"
         onPointerDown={(pointer) => {
           if (drag.current || pointer.button !== 0) return;
           pointer.currentTarget.setPointerCapture(pointer.pointerId);
@@ -130,7 +133,7 @@ export function Mission2Screen() {
           style={{ left: `${distractor.x * 100}%`, top: `${distractor.y * 100}%` }}>✦</span>}
         <div className="training-ship" data-in-path={onTrail} aria-hidden="true"
           style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%` }}>
-          <PixelSprite name="ship" size={6} />
+          <PixelSprite name="ship" size={6} style={{ transform: `rotate(${position.heading}deg)` }} />
         </div>
       </div>
       <div className="training-footer">

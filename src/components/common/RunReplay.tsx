@@ -365,15 +365,15 @@ export function RunReplay({ run }: { run: RunTelemetry }) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', marginTop: 8, fontSize: '0.82rem' }}>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
               <input type="checkbox" checked={showEyePath} onChange={(e) => setShowEyePath(e.target.checked)} />
-              <span style={{ color: '#00E5FF', fontWeight: 600 }}>👁 Eye Gaze Path (Cyan Dashed)</span>
+              <span style={{ color: '#00E5FF', fontWeight: 600 }}>Eye Gaze Path (Cyan Dashed)</span>
             </label>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
               <input type="checkbox" checked={showHandPath} onChange={(e) => setShowHandPath(e.target.checked)} />
-              <span style={{ color: 'var(--pink)', fontWeight: 600 }}>🕹 Hand / Joystick Path (Pink)</span>
+              <span style={{ color: 'var(--pink)', fontWeight: 600 }}>Hand / Joystick Path (Pink)</span>
             </label>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
               <input type="checkbox" checked={showExcessive} onChange={(e) => setShowExcessive(e.target.checked)} />
-              <span style={{ color: '#FF3366', fontWeight: 600 }}>⚠️ Excessive Jumps (Red Dots)</span>
+              <span style={{ color: '#FF3366', fontWeight: 600 }}>Excessive Jumps (Red Dots)</span>
             </label>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginLeft: 'auto' }}>
               <input type="checkbox" checked={fullTrail} onChange={(e) => setFullTrail(e.target.checked)} />

@@ -1,9 +1,10 @@
-import { useState, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { useArcade } from '../../context/ArcadeContext';
 import { useArcadeController } from '../../context/ArcadeController';
 import { playSound } from '../../utils/audio';
 import { useArcadeControls } from '../../utils/useArcadeControls';
 import { PixelSprite } from '../common/PixelSprite';
+import { shipHeading } from '../../utils/missionGames';
 
 const beacons = [{ x: 29, y: 38 }, { x: 70, y: 67 }, { x: 77, y: 27 }];
 type Position = { x: number; y: number };
@@ -12,15 +13,38 @@ const clamp = (value: number) => Math.max(7, Math.min(93, value));
 export function HowToScreen() {
   const { nextStep } = useArcade();
   const { mouseMode } = useArcadeController();
-  const [position, setPosition] = useState({ x: 49, y: 54 });
+  const field = useRef<HTMLDivElement>(null);
+  const beaconRing = useRef<HTMLDivElement>(null);
+  const ship = useRef({ x: 49, y: 54, heading: 0 });
+  const [position, setPosition] = useState(ship.current);
   const [cleared, setCleared] = useState(0);
   const [feedback, setFeedback] = useState('');
   const beacon = beacons[cleared];
-  const isAligned = (point: Position) => !!beacon && Math.hypot((point.x - beacon.x) / 7, (point.y - beacon.y) / 9) <= 1;
+  useEffect(() => {
+    if (beacon) return;
+    const timer = window.setTimeout(nextStep, 650);
+    return () => window.clearTimeout(timer);
+  }, [beacon, nextStep]);
+  function isAligned(point: Position) {
+    const arena = field.current;
+    const ring = beaconRing.current;
+    if (!beacon || !arena || !ring) return false;
+    const dx = (point.x - beacon.x) * arena.clientWidth / 100;
+    const dy = (point.y - beacon.y) * arena.clientHeight / 100;
+    return Math.hypot(dx, dy) <= ring.offsetWidth / 2;
+  }
+  function steerTo(point: Position) {
+    const previous = ship.current;
+    const bounds = field.current?.getBoundingClientRect();
+    const dx = point.x - previous.x, dy = point.y - previous.y;
+    if (!bounds || (!dx && !dy)) return;
+    ship.current = { ...point, heading: shipHeading(dx, dy, bounds) };
+    setPosition(ship.current);
+  }
   const move = (x: number, y: number, seconds: number) => {
-    setPosition((previous) => ({ x: clamp(previous.x + x * 48 * seconds), y: clamp(previous.y + y * 68 * seconds) }));
+    steerTo({ x: clamp(ship.current.x + x * 48 * seconds), y: clamp(ship.current.y + y * 68 * seconds) });
   };
-  const ping = (point = position) => {
+  const ping = (point: Position = ship.current) => {
     if (!beacon) return;
     if (isAligned(point)) {
       setCleared(cleared + 1);
@@ -34,10 +58,11 @@ export function HowToScreen() {
   useArcadeControls(move, () => ping());
 
   function pointerPosition(event: PointerEvent<HTMLDivElement>): Position {
-    const bounds = event.currentTarget.getBoundingClientRect();
+    const arena = event.currentTarget;
+    const bounds = arena.getBoundingClientRect();
     return {
-      x: clamp((event.clientX - bounds.left) * 100 / bounds.width),
-      y: clamp((event.clientY - bounds.top) * 100 / bounds.height),
+      x: clamp((event.clientX - bounds.left - arena.clientLeft) * 100 / arena.clientWidth),
+      y: clamp((event.clientY - bounds.top - arena.clientTop) * 100 / arena.clientHeight),
     };
   }
 
@@ -48,25 +73,23 @@ export function HowToScreen() {
         <p className="beacon-count">{cleared} / {beacons.length}</p>
       </div>
       <p>{mouseMode ? 'Aim at a pink ring and click to light it.' : 'Steer into the pink ring, then press the action button.'}</p>
-      <div className="training-field" onPointerMove={(event) => {
-        if (mouseMode) setPosition(pointerPosition(event));
+      <div ref={field} className="training-field" onPointerMove={(event) => {
+        if (mouseMode) steerTo(pointerPosition(event));
       }} onPointerDown={(event) => {
         const point = pointerPosition(event);
-        setPosition(point);
+        steerTo(point);
         if (mouseMode) ping(point);
       }}>
-        {beacon && <div key={cleared} className="beacon-ring" data-aligned={isAligned(position)}
+        {beacon && <div key={cleared} ref={beaconRing} className="beacon-ring" data-aligned={isAligned(position)}
           style={{ left: beacon.x + '%', top: beacon.y + '%' }} aria-hidden="true" />}
         <div className="training-ship" style={{ left: position.x + '%', top: position.y + '%' }} aria-hidden="true">
-          <PixelSprite name="ship" size={5} />
+          <PixelSprite name="ship" size={5} style={{ transform: `rotate(${position.heading}deg)` }} />
         </div>
       </div>
       <div className="training-footer">
         <div><p role="status">{beacon ? feedback || 'Find the first beacon.' : 'All beacons lit. You’re cleared for launch!'}</p>
           <p className="input-hint">{mouseMode ? 'Move the pointer to aim · Click or tap to ping' : 'Joystick or arrows to steer · Action button or Space to ping · Tap the field to aim'}</p></div>
-        {beacon
-          ? <button type="button" className="arcade-btn" onClick={() => ping()}>Ping beacon</button>
-          : <button type="button" className="arcade-btn" onClick={nextStep}>Start Odd-One-Out</button>}
+        {beacon && <button type="button" className="arcade-btn" onClick={() => ping()}>Ping beacon</button>}
       </div>
     </section>
   );

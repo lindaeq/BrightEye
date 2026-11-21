@@ -44,7 +44,7 @@ export function BuzzAnalysis() {
     const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'aeroneuro-buzz-controller.json';
+    link.download = 'brighteyed-buzz-controller.json';
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
