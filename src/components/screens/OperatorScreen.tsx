@@ -1,9 +1,18 @@
 import React from 'react';
 import { useArcade } from '../../context/ArcadeContext';
+import { useArcadeController } from '../../context/ArcadeController';
 import { Download, RefreshCw, LogOut } from 'lucide-react';
 
-export const OperatorScreen: React.FC = () => {
+export const OperatorScreen: React.FC<{ cameraReady: boolean }> = ({ cameraReady }) => {
   const { recentRuns, exportRunsCSV, goToStep } = useArcade();
+
+  const { status } = useArcadeController();
+  const checks = [
+    ['Camera', cameraReady],
+    [status.source === 'gamepad' ? 'USB gamepad' : 'Arduino', !!status.source],
+    ['Joystick', status.joystick],
+    ['Action button', status.button],
+  ] as const;
 
   return (
     <div className="flex flex-col h-full justify-between gap-4 p-6 sm:p-8 overflow-y-auto select-none">
@@ -63,11 +72,11 @@ export const OperatorScreen: React.FC = () => {
             </button>
 
             <button
-              onClick={() => goToStep('warmup')}
+              onClick={() => goToStep('start')}
               className="arcade-btn alt text-xs px-5 py-3 flex items-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>RE-CALIBRATE</span>
+              <span>HARDWARE SETUP</span>
             </button>
 
             <button
@@ -88,37 +97,12 @@ export const OperatorScreen: React.FC = () => {
             <div className="font-pixel text-[10px] text-[var(--ink)] font-bold border-b border-[var(--line)] pb-2">
               HARDWARE DIAGNOSTICS
             </div>
-            <div className="space-y-2 font-terminal text-2xl">
-              <div className="flex items-center justify-between">
-                <span>Raspberry Pi 5 (QNX):</span>
-                <b className="text-[var(--good)]">60 FPS Locked</b>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>RTOS Clock Jitter:</span>
-                <b className="text-[var(--good)]">&lt; 0.42 ms</b>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Arduino Uno Q:</span>
-                <b className="text-[var(--good)]">115200 Baud Ready</b>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Display &amp; Audio:</span>
-                <b className="text-[var(--good)]">Operational</b>
-              </div>
-            </div>
+            <ul className="preflight-checks" aria-label="Equipment status">
+              {checks.map(([label, ready]) => (
+                <li key={label} data-ready={ready}>{label} <b>{ready ? 'Ready' : 'Waiting'}</b></li>
+              ))}
+            </ul>
           </div>
-
-          <div className="border-2 border-[var(--dim)] bg-[var(--fld)] rounded-xl p-5 space-y-2 shadow-sm">
-            <div className="font-pixel text-[10px] text-[var(--ink)] font-bold border-b border-[var(--line)] pb-2">
-              DATA PRIVACY (QNX RTOS)
-            </div>
-            <div className="font-terminal text-xl space-y-1 text-[var(--dim)] leading-tight">
-              <p>• Facial coordinates calculated in volatile RAM.</p>
-              <p>• Zero pediatric video is saved on disk.</p>
-              <p className="text-emerald-500 font-bold pt-1">✓ Sun Life Health Hack Compliant</p>
-            </div>
-          </div>
-
         </div>
 
       </div>

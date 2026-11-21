@@ -50,10 +50,28 @@ npm install
 npm run dev
 ```
 
-Visit `http://localhost:5173` to explore all kiosk screens:
-- **Attract Mode** (`/`)
-- **Calibration & Hardware Sync**
-- **Stage 1: Target Lock (15s)**
-- **Stage 2: Asteroid Tunnel (15s)**
-- **Neuro-Motor Card Summary**
-- **Hardware Telemetry Drawer** (live JSON packet inspector & hardware simulation controls)
+Open `http://localhost:5173` in the browser. On the launch screen, enable the
+camera, connect the controller, move the joystick, and press the separate action
+button. **Start Game** unlocks once all four checks are green. Select the mouse
+icon next to the sound control to play with a mouse or touchpad without a camera
+or controller.
+
+The browser build includes practice, a 20-second Target Lock round, a 25-second
+Comet Tunnel star chase, and a player scorecard. The camera provides a local
+preview in this build. The QNX measurements described above are project goals.
+
+### Arduino controller input
+
+Use **Connect Arduino** in a browser with Web Serial support and select the
+controller's serial port. The controller must expose a browser-visible serial
+stream at 115200 baud and continuously send newline-delimited JSON, for example:
+
+```json
+{"x":0.45,"y":-0.2,"btn":false}
+```
+
+Use values from -1 to 1 for the two joystick axes (positive X is right, positive
+Y is down). Send the **separate button's** debounced state as `btn`, including both
+press and release. Keep sending packets while the controls are idle so the app
+can detect a dropped connection. A compatible USB gamepad can also pass the
+hardware checks using its first two axes and first button.
