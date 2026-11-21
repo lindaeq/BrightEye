@@ -304,3 +304,31 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+.operator-screen { display: grid; align-content: start; gap: 16px; padding: clamp(12px, 2.5vw, 32px); }
+.operator-panel-heading, .operator-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.operator-panel-heading { justify-content: space-between; }
+.operator-columns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 14px; }
+.operator-main { display: grid; align-content: start; gap: 14px; min-width: 0; }
+.operator-panel { display: grid; gap: 12px; min-width: 0; padding: clamp(12px, 2vw, 20px); background: var(--fld); border: 1px solid var(--line); border-top: 3px solid var(--violet); }
+.operator-panel h2 { font-size: 1.1rem; }
+.operator-panel select { color: var(--ink); background: var(--page); border: 1px solid var(--line); padding: 6px; }
+.operator-panel a { color: var(--good); text-decoration: underline; }
+.operator-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
+.operator-metrics > div { min-width: 0; padding: 10px; border: 1px solid var(--line); background: var(--body); }
+.operator-metrics dt { color: var(--pink); font: 700 1.23rem/1.1 var(--f-term); text-transform: uppercase; }
+.operator-metrics dd { font-family: var(--f-heading); font-size: 1.25rem; overflow-wrap: anywhere; }
+.measurement-notes { padding-left: 1.15rem; list-style: disc; display: grid; gap: 8px; }
+.operator-actions .arcade-text-button[aria-pressed=true] { background: var(--pink); color: var(--btnink); }
+.replay-arena { position: relative; min-height: 210px; height: clamp(210px, 35vh, 390px); border: 1px solid var(--violet); background: var(--page); overflow: hidden; }
+.replay-arena svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.replay-arena polyline { fill: none; stroke: var(--violet); stroke-width: 2px; }
+.replay-target, .replay-player { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; }
+.replay-player { border: 2px solid var(--pink); }
+.replay-target { background: var(--good); color: var(--page); }
+.replay-target[data-kind=decoy] { background: var(--bad); border-radius: 0; }
+.replay-target[data-kind=star] { background: var(--pink); }
+.replay-controls { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.replay-controls input { width: 100%; accent-color: var(--pink); }
+.replay-controls output { font-family: var(--f-term); white-space: nowrap; }
+@media (max-width: 760px) { .operator-columns { grid-template-columns: minmax(0, 1fr); } }
