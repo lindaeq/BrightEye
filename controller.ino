@@ -1,20 +1,18 @@
 // controller.ino
-// Reads buttons + joystick and streams the full controller state over USB serial
-// as one JSON line, about 50 times per second.
+// Reads 1 button + joystick and streams the full controller state over USB serial
+// as one JSON line, 50 times per second.
 //
-// Example line:  {"b1":1,"b2":0,"sw":0,"x":-12,"y":87}
-//   b1, b2, sw : 1 = pressed, 0 = released
-//   x, y       : -100 .. 100, 0 = centered (deadzone applied)
+// Example line:  {"b1":1,"sw":0,"x":-12,"y":87}
+//   b1, sw : 1 = pressed, 0 = released
+//   x, y   : -100 .. 100, 0 = centered (deadzone applied)
 //
 // Wiring (Arduino Uno):
-//   Button 1   : one leg -> pin 2, other leg -> GND
-//   Button 2   : one leg -> pin 3, other leg -> GND
-//   Joystick   : GND -> GND, +5V -> 5V, VRx -> A0, VRy -> A1, SW -> pin 4
+//   Button 1   : one leg -> pin 2 (D2), other leg -> GND
+//   Joystick   : GND -> GND, +5V -> 5V, VRx -> A0, VRy -> A1, SW -> pin 13
 // No resistors needed: INPUT_PULLUP uses the Arduino's internal pull-ups.
 
 const int BTN1_PIN = 2;
-const int BTN2_PIN = 3;
-const int SW_PIN   = 4;
+const int SW_PIN   = 13;
 const int X_PIN    = A0;
 const int Y_PIN    = A1;
 
@@ -32,7 +30,6 @@ struct Button {
 
 Button buttons[] = {
   {BTN1_PIN, false, false, 0},
-  {BTN2_PIN, false, false, 0},
   {SW_PIN,   false, false, 0},
 };
 const int NUM_BUTTONS = sizeof(buttons) / sizeof(buttons[0]);
@@ -92,8 +89,7 @@ void loop() {
 
     // Build one JSON line. Field names are the contract with the front end.
     Serial.print("{\"b1\":"); Serial.print(buttons[0].stable ? 1 : 0);
-    Serial.print(",\"b2\":"); Serial.print(buttons[1].stable ? 1 : 0);
-    Serial.print(",\"sw\":"); Serial.print(buttons[2].stable ? 1 : 0);
+    Serial.print(",\"sw\":"); Serial.print(buttons[1].stable ? 1 : 0);
     Serial.print(",\"x\":");  Serial.print(x);
     Serial.print(",\"y\":");  Serial.print(y);
     Serial.println("}");
