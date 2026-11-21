@@ -82,7 +82,7 @@ export function AppContent() {
                 </ul>
                 <div className="setup-actions">
                   {controller.canConnectSerial && (
-                    <button type="button" className="arcade-btn alt" disabled={controller.connecting}
+                    <button type="button" className="arcade-btn arduino-btn" disabled={controller.connecting}
                       onClick={controller.serialOpen ? controller.disconnect : controller.connect}>
                       {controller.connecting ? 'Connecting…' : controller.serialOpen ? 'Disconnect Arduino' : 'Connect Arduino'}
                     </button>

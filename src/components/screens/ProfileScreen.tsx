@@ -19,11 +19,13 @@ export function ProfileScreen() {
         setPlayerProfile({ ...playerProfile, nickname: nickname.trim() });
         nextStep();
       }}>
-        <label htmlFor="call-sign">Call sign</label>
-        <input id="call-sign" value={nickname} maxLength={16} required placeholder="e.g. Nova"
-          onChange={(event) => setPlayerProfile({ ...playerProfile, nickname: event.target.value })} />
-        <fieldset>
-          <legend>How old are you?</legend>
+        <div className="pilot-field">
+          <label className="pilot-field-label" htmlFor="call-sign">Call sign</label>
+          <input id="call-sign" value={nickname} maxLength={16} required placeholder="e.g. Nova"
+            onChange={(event) => setPlayerProfile({ ...playerProfile, nickname: event.target.value })} />
+        </div>
+        <fieldset className="pilot-age">
+          <legend className="pilot-field-label">How old are you?</legend>
           <div className="pilot-options">
             {['5–7', '8–10', '11–13', '14–17'].map((age) => (
               <label key={age}>
@@ -35,18 +37,18 @@ export function ProfileScreen() {
           </div>
         </fieldset>
         <div className="pilot-details">
-          <label>Writing hand
+          <label className="pilot-field"><span className="pilot-field-label">Writing hand</span>
             <select value={writingHand} onChange={(event) => setPlayerProfile({
               ...playerProfile, writingHand: event.target.value === 'Left' ? 'Left' : 'Right',
             })}><option>Right</option><option>Left</option></select>
           </label>
-          <label>Wearing glasses?
+          <label className="pilot-field"><span className="pilot-field-label">Wearing glasses?</span>
             <select value={glasses} onChange={(event) => setPlayerProfile({
               ...playerProfile, glasses: event.target.value === 'Yes' ? 'Yes' : 'No',
             })}><option>No</option><option>Yes</option></select>
           </label>
         </div>
-        <label className="pilot-consent">
+        <label className="pilot-field pilot-consent">
           <input type="checkbox" required checked={consentAdult}
             onChange={(event) => setPlayerProfile({ ...playerProfile, consentAdult: event.target.checked })} />
           A grown-up is here and says it’s okay to play.

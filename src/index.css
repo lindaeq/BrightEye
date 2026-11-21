@@ -145,7 +145,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .preflight-checks li[data-ready='true']::before { background: var(--good); }
 .preflight-checks li b { color: var(--pink); font: 700 1.25rem/1 var(--f-term); text-transform: uppercase; }
 .preflight-checks li[data-ready='true'] b { color: var(--good); }
-.setup-actions .arcade-btn:not(.alt):not(:disabled) { background: var(--good); border-color: var(--good); }
+.setup-actions .arcade-btn:not(.alt):not(.arduino-btn):not(:disabled) { background: var(--good); border-color: var(--good); }
+.arcade-btn.arduino-btn { background: var(--c-blue); border-color: var(--c-blue); }
+.arcade-btn.arduino-btn:not(:disabled):hover { background: #c6b2f3; border-color: #c6b2f3; }
+.arcade-btn.arduino-btn:not(:disabled):active { background: var(--violet); border-color: var(--violet); }
 .setup-actions, .camera-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: start; }
 .camera-monitor[hidden] { display: none; }
 .camera-monitor { position: absolute; top: 8px; right: 8px; z-index: 5; width: min(220px, 42%); }
@@ -164,30 +167,49 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   width: 114px;
   height: 114px;
   border: 1px solid var(--violet);
-  border-radius: 24px;
   color: var(--pink);
   background: #38294d;
   box-shadow: inset 0 0 18px var(--glow-color), 0 0 24px #9770c740;
 }
-.pilot-form { display: grid; gap: 12px; padding: clamp(18px, 3vw, 32px); border-radius: 22px; background: var(--fld); border: 1px solid var(--bezel); }
+.pilot-form {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: clamp(14px, 2.5vw, 26px);
+  background: var(--fld);
+  border: 1px solid var(--violet);
+  border-top: 4px solid var(--violet);
+}
+.pilot-field, .pilot-age {
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--body);
+  border: 1px solid var(--bezel);
+}
+.pilot-field-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--pink);
+  font: 700 1.35rem/1 var(--f-term);
+  text-transform: uppercase;
+}
+.pilot-age legend { margin: 0; padding-inline: 4px; }
 .pilot-form input:not([type]), .pilot-form select {
   display: block;
   width: 100%;
   min-height: 45px;
   padding: 8px 12px;
   border: 1px solid var(--bezel);
-  border-radius: 10px;
   color: var(--ink);
   background: var(--page);
 }
 .pilot-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .pilot-options label { position: relative; flex: 1; }
 .pilot-options input { position: absolute; opacity: 0; }
-.pilot-options span { display: block; min-height: 44px; padding: 8px 12px; text-align: center; background: var(--page); border: 1px solid var(--bezel); border-radius: 10px; white-space: nowrap; cursor: pointer; }
+.pilot-options span { display: block; min-height: 44px; padding: 8px 12px; text-align: center; background: var(--page); border: 1px solid var(--bezel); white-space: nowrap; cursor: pointer; }
 .pilot-options input:checked + span { background: var(--mint); color: var(--page); border-color: var(--good); }
 .pilot-options input:focus-visible + span { outline: 3px solid var(--good); outline-offset: 3px; }
 .pilot-details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.pilot-details select { margin-top: 6px; }
 .pilot-consent { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .pilot-consent input { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--mint); }
 
@@ -252,9 +274,19 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 .summary-screen { padding: clamp(22px, 6vw, 72px); display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center; }
 .flight-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; margin-block: 12px; }
-.flight-results div { display: grid; gap: 6px; background: var(--fld); border: 1px solid var(--bezel); border-radius: 12px; padding: clamp(10px, 2vw, 22px); }
-.flight-results dt { color: var(--pink); }
-.flight-results dd { font: 700 clamp(1.4rem, 4vw, 3rem) var(--f-heading); }
+.flight-results div {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  background: var(--fld);
+  border: 1px solid var(--bezel);
+  border-top: 4px solid var(--score-accent, var(--violet));
+  padding: clamp(10px, 2vw, 22px);
+}
+.flight-results div:first-child { --score-accent: var(--mint); }
+.flight-results div:last-child { --score-accent: var(--pink); }
+.flight-results dt { color: var(--pink); font: 700 1.45rem/1 var(--f-term); text-transform: uppercase; }
+.flight-results dd { font: 400 clamp(1.05rem, 2.7vw, 2.3rem)/1.5 var(--f-pixel); }
 
 @media (max-width: 720px) {
   .pilot-screen, .arcade-display[data-camera-inline='true'], .arcade-display[data-home='true'] { grid-template-columns: minmax(0, 1fr); }
