@@ -40,12 +40,36 @@ The browser can keep using the Arduino controller through Web Serial. If your Pi
 
 ## Parent report chat
 
-At the top of Operator view, select **Summarize this report** or submit a question.
+In the Operator sidebar, select **Summarize this report** or submit a question.
 The chat sends the displayed scores and recent chat messages to Gemini when
 someone asks a question.
 
 Set `GEMINI_API_KEY` in the gitignored `server/.env.local` and run
 `npm run start --prefix server` alongside `npm run dev`. Chat works without
 PostgreSQL. It uses `gemini-3.1-flash-lite` by default. Set `GEMINI_MODEL` in the
-same file to override it with a compatible Gemini model. For a hosted build,
-route `/api/report-chat` to the Node API.
+same file to override it with a compatible Gemini model.
+
+## Deploy to Vercel
+
+Import the GitHub repo as a Vite project and select the repository root. Use
+`npm run build` and the `dist` output directory. Vercel serves the run API and
+Gemini chat from the same HTTPS origin as the frontend.
+
+Set these values under **Settings → Environment Variables** for Production.
+Mark secrets as sensitive and redeploy after adding them to an existing project.
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | A TLS-enabled Tiger Cloud PostgreSQL connection URL. Use a role with `SELECT, INSERT, DELETE` on `public.arcade_runs`. |
+| `BRIGHTEYE_OPERATOR_PASSWORD` | A long, unique password for this hosted demo. |
+| `GEMINI_API_KEY` | Optional. Required to enable Gemini chat. |
+| `GEMINI_MODEL` | Optional compatible model override. |
+
+Leave `QNX_TRACKER_URL` unset for a hosted demo without the Pi. To use the hosted
+run API, open `https://<your-vercel-domain>/api/sign-in` directly in your browser.
+Sign in as `operator` using `BRIGHTEYE_OPERATOR_PASSWORD`. The browser returns
+you to the arcade. Turn on mouse mode, finish both missions, and confirm the
+saved run appears in Operator. All hosted API routes require this shared sign-in.
+Only share it with trusted testers, since they can view and delete saved runs.
+Use a separate Tiger development database for demos with sample sessions.
+Local Vite and Node development use the same handlers without the hosted sign-in.

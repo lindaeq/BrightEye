@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/runs/:runId", "destination": "/api/runs?runId=:runId" }
+  ],
+  "functions": {
+    "api/report-chat.js": { "maxDuration": 30 }
+  }
+}

@@ -1,3 +1,5 @@
+import { BodyTooLargeError, readJson } from './request-json.js';
+
 const reportFields = [
   'targetsHit', 'starsCaught', 'wrongCornerClicks', 'flashToGazeMs',
   'flashToClickMs', 'visualFocusPercent', 'eyeToHandMs', 'offTrailPercent', 'joystickJitterPercent', 'gazeLeadPercent',
@@ -26,18 +28,9 @@ export async function handleReportChat(request, response, reply) {
 
   let body;
   try {
-    const chunks = [];
-    let size = 0;
-    for await (const chunk of request) {
-      size += chunk.length;
-      if (size > 96 * 1024) {
-        response.setHeader('Connection', 'close');
-        return reply(response, 413, 'Chat request is too large');
-      }
-      chunks.push(chunk);
-    }
-    body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  } catch {
+    body = await readJson(request, 96 * 1024);
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) return reply(response, 413, 'Chat request is too large');
     return reply(response, 400, 'Invalid JSON');
   }
 
