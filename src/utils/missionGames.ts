@@ -16,6 +16,15 @@ export function quadrant(point: Point, deadBand = 0) {
 
 export const clampUnit = (value: number) => Math.max(0, Math.min(1, value));
 
+export function advanceCornerAim(point: Point, x: number, y: number, seconds: number, analog: boolean): Point {
+  const [topLeft, , , bottomRight] = corners;
+  const steer = (axis: number) => analog ? axis * (0.55 + 0.45 * Math.abs(axis)) : axis;
+  return {
+    x: Math.max(topLeft.x, Math.min(bottomRight.x, point.x + steer(x) * 0.44 * seconds)),
+    y: Math.max(topLeft.y, Math.min(bottomRight.y, point.y + steer(y) * 0.56 * seconds)),
+  };
+}
+
 export function shipHeading(dx: number, dy: number, field: { width: number; height: number }) {
   return Math.atan2(dy * field.height, dx * field.width) * 180 / Math.PI;
 }

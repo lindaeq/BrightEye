@@ -42,7 +42,7 @@ export function HowToScreen() {
     setPosition(ship.current);
   }
   const move = (x: number, y: number, seconds: number) => {
-    steerTo({ x: clamp(ship.current.x + x * 48 * seconds), y: clamp(ship.current.y + y * 68 * seconds) });
+    steerTo({ x: clamp(ship.current.x + x * 34 * seconds), y: clamp(ship.current.y + y * 44 * seconds) });
   };
   const ping = (point: Position = ship.current) => {
     if (!beacon) return;

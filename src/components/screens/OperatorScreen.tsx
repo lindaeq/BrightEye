@@ -159,7 +159,6 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
     { id: 'history', label: 'Run history' },
     ...(run ? [
       { id: 'summary', label: 'Run recap' },
-      { id: 'chat', label: 'Gemini chat' },
       { id: 'replay', label: 'Video overview' },
       { id: 'graphs', label: 'Graphs' },
       { id: 'measurements', label: 'Measurements' },
@@ -178,9 +177,22 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
         </div>
       </header>
       <div className="operator-layout">
-        <nav className="operator-rail" aria-label="Operator sections">
-          {sections.map(({ id, label }) => <a key={id} href={`#operator-${id}`} data-section={id}>{label}</a>)}
-        </nav>
+        <aside className="operator-sidebar">
+          <nav className="operator-rail" aria-label="Operator sections">
+            {sections.map(({ id, label }) => <a key={id} href={`#operator-${id}`} data-section={id}>{label}</a>)}
+          </nav>
+          <section id="operator-chat" className="operator-chat-panel" aria-label="Gemini run chat">
+            {run && stats ? (
+              <ResultsChatbot key={run.id} m1Hits={stats.hits} starsCaught={stats.stars} stats={stats} />
+            ) : (
+              <div className="operator-chat-standby">
+                <div className="gemini-badge">Gemini</div>
+                <h3>Run chat</h3>
+                <p>Select a run to ask about its timing, gaze, or steering measurements.</p>
+              </div>
+            )}
+          </section>
+        </aside>
         <div className="operator-content">
           <section id="operator-history" data-section="history" className="operator-runbar operator-section" aria-label="Run history">
             <div className="operator-panel-heading">
@@ -220,11 +232,6 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
                   <p>If coordination or attention difficulties persist during everyday activities, at home or at school, bring those observations to your child’s primary care provider. They can help decide whether an assessment is appropriate. <a href="https://caringforkids.cps.ca/handouts/behavior-and-development/developmental-coordination-disorder" target="_blank" rel="noreferrer">Canadian Paediatric Society guidance</a></p>
                 </details>
               </section>
-              {stats && (
-                <section id="operator-chat" data-section="chat" className="operator-section" aria-label="Gemini chat">
-                  <ResultsChatbot key={run.id} m1Hits={stats.hits} starsCaught={stats.stars} stats={stats} />
-                </section>
-              )}
               <details key={`replay-${run.id}`} id="operator-replay" data-section="replay" className="operator-disclosure operator-section">
                 <summary>Video overview</summary>
                 <RunReplay key={run.id} run={run} />

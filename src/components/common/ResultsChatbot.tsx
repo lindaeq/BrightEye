@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, User, RefreshCw, AlertCircle } from 'lucide-react';
+import { Send, User, RefreshCw, AlertCircle, Sparkles, Bot } from 'lucide-react';
 import type { summarizeRun } from '../../utils/runTelemetry';
 
 interface ResultsChatbotProps {
@@ -95,56 +95,30 @@ export function ResultsChatbot({ m1Hits, starsCaught, stats }: ResultsChatbotPro
   }
 
   return (
-    <div
-      style={{
-        padding: '16px',
-        textAlign: 'left',
-      }}
-    >
-      {/* Chatbot Header */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid rgba(124, 92, 191, 0.4)',
-          paddingBottom: 10,
-          marginBottom: 12,
-          gap: 10,
-        }}
-      >
+    <div className="operator-chat-widget">
+      {/* Header */}
+      <div className="chat-widget-header">
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#E9FAE3' }}>Gemini chat</h3>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--pink)' }}>
-            Get a plain-language summary or ask a follow-up question.
-          </p>
+          <span className="gemini-badge"><Sparkles size={12} aria-hidden="true" /> Gemini</span>
+          <h3 className="chat-widget-title">Run chat</h3>
         </div>
 
-        {messages.length > 0 && <button
-          type="button"
-          onClick={() => {
-            setMessages([]);
-            setInputText('');
-            setError(null);
-          }}
-          disabled={isLoading}
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--bezel)',
-            color: 'var(--ink)',
-            cursor: 'pointer',
-            padding: '5px 10px',
-            borderRadius: 3,
-            fontSize: '0.75rem',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <RefreshCw size={13} />
-          <span>Clear chat</span>
-        </button>}
+        {messages.length > 0 && (
+          <button
+            type="button"
+            className="chat-clear-btn"
+            onClick={() => {
+              setMessages([]);
+              setInputText('');
+              setError(null);
+            }}
+            disabled={isLoading}
+            title="Reset conversation"
+          >
+            <RefreshCw size={11} />
+            <span>Clear</span>
+          </button>
+        )}
       </div>
 
       {/* Message Thread */}
@@ -152,153 +126,81 @@ export function ResultsChatbot({ m1Hits, starsCaught, stats }: ResultsChatbotPro
         ref={threadRef}
         role="log"
         aria-label="Report conversation"
-        style={{
-          maxHeight: '340px',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          paddingRight: 6,
-          marginBottom: 14,
-        }}
+        className="chat-thread"
       >
+        {messages.length === 0 && (
+          <div className="chat-empty-intro">
+            <p>Ask anything about this run’s visual latency, motor jitter, or impulse accuracy.</p>
+          </div>
+        )}
+
         {messages.map((msg) => (
           <div
             key={msg.id}
             style={{
               display: 'flex',
-              gap: 10,
+              gap: 8,
               alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '88%',
+              maxWidth: '92%',
             }}
           >
-            <div
-              style={{
-                background:
-                  msg.role === 'user'
-                    ? 'rgba(124, 92, 191, 0.35)'
-                    : 'rgba(3, 1, 44, 0.85)',
-                border: msg.role === 'user' ? '1px solid var(--pink)' : '1px solid rgba(0, 229, 255, 0.5)',
-                borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '2px 12px 12px 12px',
-                padding: '10px 14px',
-                color: '#FFFFFF',
-                fontSize: '0.88rem',
-                lineHeight: 1.55,
-                whiteSpace: 'pre-line',
-                overflowWrap: 'anywhere',
-                minWidth: 0,
-                boxShadow: msg.role === 'model' ? '0 0 12px rgba(0, 229, 255, 0.08)' : 'none',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, gap: 12 }}>
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    color: msg.role === 'user' ? 'var(--pink)' : '#00E5FF',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {msg.role === 'user' ? 'You' : 'Report assistant'}
-                </span>
-                <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.45)' }}>{msg.timestamp}</span>
+            {msg.role === 'model' && (
+              <div className="chat-avatar model">
+                <Bot size={13} />
               </div>
-              {msg.text}
+            )}
+
+            <div className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-model'}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, gap: 10 }}>
+                <span className="chat-author-tag">
+                  {msg.role === 'user' ? 'You' : 'Gemini Assistant'}
+                </span>
+                <span className="chat-time-tag">{msg.timestamp}</span>
+              </div>
+              <div className="chat-msg-body">{msg.text}</div>
             </div>
 
             {msg.role === 'user' && (
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  background: 'rgba(217, 189, 197, 0.2)',
-                  border: '1px solid var(--pink)',
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  marginTop: 2,
-                }}
-              >
-                <User size={15} color="var(--pink)" />
+              <div className="chat-avatar user">
+                <User size={13} />
               </div>
             )}
           </div>
         ))}
 
         {isLoading && (
-          <div style={{ display: 'flex', gap: 10, alignSelf: 'flex-start', alignItems: 'center' }}>
-            <div
-              style={{
-                background: 'rgba(3, 1, 44, 0.85)',
-                border: '1px solid rgba(0, 229, 255, 0.3)',
-                padding: '8px 12px',
-                borderRadius: '2px 10px 10px 10px',
-                fontSize: '0.82rem',
-                color: '#00E5FF',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <span>Waiting for Gemini…</span>
+          <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-start', alignItems: 'center' }}>
+            <div className="chat-avatar model">
+              <Bot size={13} />
+            </div>
+            <div className="chat-loading-bubble">
+              <Sparkles size={13} className="spin-slow" />
+              <span>Analyzing with Gemini…</span>
             </div>
           </div>
         )}
 
         {error && (
-          <div
-            style={{
-              padding: '6px 10px',
-              borderRadius: 3,
-              background: 'rgba(255, 51, 102, 0.2)',
-              border: '1px solid #FF3366',
-              color: '#FF3366',
-              fontSize: '0.78rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
+          <div className="chat-error-banner" role="alert">
             <AlertCircle size={14} />
             <span>{error}</span>
           </div>
         )}
-
       </div>
 
       {/* Suggested Quick Prompts */}
-      <div style={{ marginBottom: 12 }}>
-        <p style={{ margin: '0 0 6px 0', fontSize: '0.72rem', color: 'var(--pink)', textTransform: 'uppercase' }}>
-          💡 Suggested Questions:
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      <div className="chat-prompts-area">
+        <p className="chat-prompts-label">Suggested Questions</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {QUICK_PROMPTS.map((prompt, i) => (
             <button
               key={i}
               type="button"
+              className="chat-prompt-pill"
               disabled={isLoading}
               onClick={() => handleSendMessage(prompt)}
-              style={{
-                background: 'rgba(3, 1, 44, 0.7)',
-                border: '1px solid rgba(0, 229, 255, 0.4)',
-                color: '#E9FAE3',
-                fontSize: '0.74rem',
-                padding: '4px 8px',
-                borderRadius: 3,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 229, 255, 0.2)';
-                e.currentTarget.style.borderColor = '#00E5FF';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(3, 1, 44, 0.7)';
-                e.currentTarget.style.borderColor = 'rgba(0, 229, 255, 0.4)';
-              }}
             >
-              {prompt}
+              ✦ {prompt}
             </button>
           ))}
         </div>
@@ -310,53 +212,31 @@ export function ResultsChatbot({ m1Hits, starsCaught, stats }: ResultsChatbotPro
           e.preventDefault();
           handleSendMessage();
         }}
-        style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+        className="chat-input-row"
       >
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Ask about the results…"
+          placeholder="Ask about this run…"
           aria-label="Question about the report"
           maxLength={1000}
           disabled={isLoading}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: 'rgba(3, 1, 44, 0.9)',
-            border: '1px solid var(--violet)',
-            color: '#FFFFFF',
-            padding: '10px 14px',
-            fontSize: '0.88rem',
-            borderRadius: 3,
-            outline: 'none',
-          }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = '#00E5FF')}
-          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--violet)')}
+          className="chat-text-input"
         />
         <button
           type="submit"
           disabled={isLoading || !inputText.trim()}
-          className="arcade-btn"
-          style={{
-            minHeight: '40px',
-            padding: '8px 16px',
-            fontSize: '1rem',
-            background: inputText.trim() ? '#00E5FF' : 'var(--btn)',
-            color: inputText.trim() ? '#03012C' : 'var(--btnink)',
-            borderColor: '#00E5FF',
-            cursor: inputText.trim() && !isLoading ? 'pointer' : 'not-allowed',
-            opacity: inputText.trim() && !isLoading ? 1 : 0.6,
-          }}
+          className="chat-ask-button"
         >
-          <Send size={15} />
+          <Send size={13} />
           <span>Ask</span>
         </button>
       </form>
 
       {/* Footnote */}
-      <p style={{ margin: '8px 0 0 0', fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.4)', textAlign: 'center' }}>
-        Sending a question shares the report scores and chat text with Google Gemini. Avoid including personal details. Answers are for understanding the game results.
+      <p className="chat-footnote">
+        Scores are shared with Google Gemini. Does not provide clinical diagnosis.
       </p>
     </div>
   );

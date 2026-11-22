@@ -72,7 +72,7 @@ export function AppContent() {
   return (
     <div className="arcade-shell">
       <header className="arcade-hud">
-        <span className="arcade-brand"><PixelSprite name="inv" size={2} /> brighteyed</span>
+        <span className="arcade-brand"><PixelSprite name="inv" size={2} /> BrightEye</span>
         {stage >= 0 && (
           <div className="flight-progress" role="progressbar" aria-label="Flight progress"
             aria-valuemin={0} aria-valuemax={stages.length} aria-valuenow={stage + 1}>

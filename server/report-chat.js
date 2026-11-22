@@ -3,7 +3,7 @@ const reportFields = [
   'flashToClickMs', 'visualFocusPercent', 'eyeToHandMs', 'offTrailPercent', 'joystickJitterPercent', 'gazeLeadPercent',
 ];
 
-const instructions = `Help parents understand their child's AeroNeuro arcade report.
+const instructions = `Help parents understand their child's BrightEye arcade report.
 Use plain language, short paragraphs or simple bullets, and base answers on the supplied game results.
 For a summary, highlight the key recorded results and explain what they describe in the game.
 Flash-to-gaze is the recorded time from the target flash to gaze detection.

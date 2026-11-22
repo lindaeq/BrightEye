@@ -97,7 +97,7 @@ export function Mission2Screen() {
     }
   }
 
-  useArcadeControls((x, y, seconds, source) => move(x * seconds * 0.27, y * seconds * 0.54, source));
+  useArcadeControls((x, y, seconds, source) => move(x * seconds * 0.22, y * seconds * 0.34, source));
 
   function dragShip(pointer: PointerEvent<HTMLDivElement>) {
     const previous = drag.current;

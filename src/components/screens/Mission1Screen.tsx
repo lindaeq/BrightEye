@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useArcade } from '../../context/ArcadeContext';
-import { clampUnit, corners, quadrant } from '../../utils/missionGames';
+import { advanceCornerAim, corners, quadrant } from '../../utils/missionGames';
 import { playSound } from '../../utils/audio';
 import type { InputSource, Point } from '../../utils/runTelemetry';
 import { useArcadeControls } from '../../utils/useArcadeControls';
@@ -74,9 +74,9 @@ export function Mission1Screen() {
     setRound({ corner: (round.corner + 1 + Math.floor(Math.random() * (corners.length - 1))) % corners.length });
   }
 
-  useArcadeControls((x, y, seconds) => {
-    const next = { x: clampUnit(cursor.current.x + x * 0.9 * seconds),
-      y: clampUnit(cursor.current.y + y * 1.25 * seconds) };
+  useArcadeControls((x, y, seconds, source) => {
+    const next = advanceCornerAim(cursor.current, x, y, seconds, source === 'joystick');
+    if (next.x === cursor.current.x && next.y === cursor.current.y) return;
     cursor.current = next;
     setAim(next);
   }, (source) => answer(quadrant(cursor.current, 0.10), source));

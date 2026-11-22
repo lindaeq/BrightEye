@@ -1,4 +1,4 @@
-# brighteyed
+# BrightEye
 
 ## 30-second gameplay
 
