@@ -1,4 +1,12 @@
 import { createServer } from 'node:http';
+import { loadEnvFile } from 'node:process';
+import { handleReportChat } from './report-chat.js';
+
+try {
+  loadEnvFile(new URL('./.env.local', import.meta.url));
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
 
 const maxBodyBytes = 2 * 1024 * 1024;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,6 +33,7 @@ function isTrace(trace) {
 
 createServer(async (request, response) => {
   const [path, query] = request.url.split('?');
+  if (path === '/api/report-chat') return handleReportChat(request, response, reply);
   const collection = path === '/api/runs';
   const id = path.startsWith('/api/runs/') ? path.slice('/api/runs/'.length) : '';
   if (!collection && !uuidPattern.test(id)) return reply(response, 404, 'Not found');
@@ -35,8 +44,8 @@ createServer(async (request, response) => {
         await pool.query('DELETE FROM public.arcade_runs WHERE id = $1', [id]);
         return reply(response, 200, 'Run deleted');
       }
-      const metadata = 'id, ended_at AS "endedAt", age_group AS "ageGroup"';
-      const traces = ', target_trace AS target, comet_trace AS comet';
+      const metadata = `id, ended_at AS "endedAt", age_group AS "ageGroup", target_trace->>'playerName' AS "playerName"`;
+      const traces = `, target_trace - 'playerName' AS target, comet_trace AS comet`;
       if (collection) {
         const columns = query === 'full=1' ? metadata + traces : metadata;
         const result = await pool.query(`SELECT ${columns} FROM public.arcade_runs ORDER BY ended_at DESC, id DESC`);
@@ -79,6 +88,7 @@ createServer(async (request, response) => {
   if (typeof run?.id !== 'string' || !uuidPattern.test(run.id)
     || typeof run.endedAt !== 'string' || !Number.isFinite(Date.parse(run.endedAt))
     || typeof run.ageGroup !== 'string' || run.ageGroup.length > 100
+    || (run.playerName != null && (typeof run.playerName !== 'string' || run.playerName.length > 16))
     || !isTrace(run.target) || !isTrace(run.comet)) {
     return reply(response, 400, 'Invalid run telemetry');
   }
@@ -88,7 +98,7 @@ createServer(async (request, response) => {
     await pool.query(
       `INSERT INTO public.arcade_runs (id, ended_at, age_group, target_trace, comet_trace)
        VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
-      [run.id, new Date(run.endedAt), run.ageGroup, run.target, run.comet],
+      [run.id, new Date(run.endedAt), run.ageGroup, { ...run.target, playerName: run.playerName?.trim() || null }, run.comet],
     );
     return reply(response, 200, 'Run saved');
   } catch (error) {

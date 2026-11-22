@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useArcadeController } from '../context/ArcadeController';
+import { getGazeDemo } from './gazeDemo';
 import type { InputSource, MissionTrace, RunEvent, TraceFrame } from './runTelemetry';
 
 export function useMissionTrace(readGame: () => Omit<TraceFrame, 'ms' | 'stick'> | null, game?: MissionTrace['game']) {
@@ -19,6 +20,7 @@ export function useMissionTrace(readGame: () => Omit<TraceFrame, 'ms' | 'stick'>
   const sample = useCallback((time: number) => {
     const scene = read.current();
     if (!scene || finished.current) return;
+    if (getGazeDemo()) trace.current.simulatedGaze = true;
     const { x, y } = input.current;
     trace.current.frames.push({ ...scene, ms: time, stick: controllerAvailable.current ? { x, y } : null });
   }, [input]);

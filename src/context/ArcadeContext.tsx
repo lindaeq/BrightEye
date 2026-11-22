@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { playSound, toggleAudioMute, isAudioMuted } from '../utils/audio';
-import type { MissionTrace, RunTelemetry } from '../utils/runTelemetry';
+import { isDemoRun, type MissionTrace, type RunTelemetry } from '../utils/runTelemetry';
 
 export type StepId = 
   | 'start' 
@@ -109,7 +109,7 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const targetTrace = useRef<MissionTrace | null>(null);
 
   const uploadRun = useCallback((run: RunTelemetry) => {
-    if (activeUploads.current.has(run.id)) return;
+    if (isDemoRun(run) || activeUploads.current.has(run.id)) return;
     window.clearTimeout(uploadTimers.current.get(run.id));
     uploadTimers.current.delete(run.id);
     activeUploads.current.add(run.id);
@@ -161,12 +161,13 @@ export const ArcadeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: crypto.randomUUID(),
       endedAt: new Date().toISOString(),
       ageGroup: playerProfile.ageGroup,
+      playerName: playerProfile.nickname.trim(),
       target,
       comet: trace,
     };
     setLatestRun(run);
     uploadRun(run);
-  }, [playerProfile.ageGroup, uploadRun]);
+  }, [playerProfile.ageGroup, playerProfile.nickname, uploadRun]);
 
   const toggleMute = () => {
     const next = toggleAudioMute();

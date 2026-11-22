@@ -99,6 +99,8 @@ export function Mission1Screen() {
             }}
             style={{ left: `${corner.x * 100}%`, top: `${corner.y * 100}%` }}>✦</button>
         ))}
+        {eye.demoMode && gaze && <span className="demo-gaze-marker" aria-hidden="true"
+          style={{ left: `${gaze.x * 100}%`, top: `${gaze.y * 100}%` }} />}
         <div className="game-crosshair" aria-hidden="true" style={{ left: `${aim.x * 100}%`, top: `${aim.y * 100}%` }} />
       </div>
       <div className="training-footer">

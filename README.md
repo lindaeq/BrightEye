@@ -11,7 +11,7 @@ Operator history and CSV export include wrong-corner selections, flash-to-gaze, 
 
 1. In the Tiger Console SQL editor for your development service, run [the arcade runs migration](server/001_arcade_runs.sql).
 2. Create a PostgreSQL login for the API with `USAGE` on the `public` schema and `SELECT, INSERT, DELETE` on `public.arcade_runs`. Supply that login's TLS-enabled PostgreSQL URI as `DATABASE_URL` in `server/.env.local`. This file is gitignored. Use `sslmode=verify-full` in the connection URI.
-3. With Node.js 22 or later, run `npm install --prefix server` and `npm run start --prefix server` from the repo root.
+3. With Node.js 20.12 or later, run `npm install --prefix server` and `npm run start --prefix server` from the repo root.
 4. Run `npm install` and `npm run dev` from the repo root in another terminal. Open the localhost URL printed by Vite.
 
 Finish both missions and watch the upload popup. Open Operator → Run history to select a saved replay or delete a run. The API binds to localhost and Vite forwards requests to it during development. To verify the write in Tiger Console, run:
@@ -26,6 +26,26 @@ On the Pi, install Python packages `opencv-python`, `numpy`, and `flask` in your
 
 To enable eye tracking, set `QNX_TRACKER_URL` before starting Vite. In PowerShell, use `$env:QNX_TRACKER_URL = 'http://<pi-ip>:8080'`. Use `http://127.0.0.1:8080` when Vite runs on the Pi. Leave the variable unset to play and save runs without the tracker.
 
+If Vite runs on your Mac and Flask runs on the Pi, open the tunnel in a Mac terminal and leave it running:
+
+```sh
+ssh -N -o ExitOnForwardFailure=yes -L 8080:127.0.0.1:8080 '<pi-user>@<pi-address>'
+```
+
+Set `QNX_TRACKER_URL=http://127.0.0.1:8080` in the repository's `.env.local`, then start or restart `npm run dev` in another Mac terminal. Open the Vite URL (usually `http://localhost:5173`). Port 8080 serves the tracker preview directly. To check the website's proxy, open `http://localhost:5173/qnx/telemetry`.
+
 Check **Operator → Hardware diagnostics → Eye tracker** for the connection status. Complete a run to see its gaze metrics and path in Operator. Runs saved before eye tracking still replay in the same history. Tiger stores gaze samples in the existing mission trace columns.
 
 The browser can keep using the Arduino controller through Web Serial. If your Pi setup also needs serial gaze output, install `pyserial` and set `EYE_TRACKER_SERIAL_PORT` to a dedicated serial port before launching the tracker.
+
+## Parent report chat
+
+At the top of Operator view, select **Summarize this report** or submit a question.
+The chat sends the displayed scores and recent chat messages to Gemini when
+someone asks a question.
+
+Set `GEMINI_API_KEY` in the gitignored `server/.env.local` and run
+`npm run start --prefix server` alongside `npm run dev`. Chat works without
+PostgreSQL. It uses `gemini-3.1-flash-lite` by default. Set `GEMINI_MODEL` in the
+same file to override it with a compatible Gemini model. For a hosted build,
+route `/api/report-chat` to the Node API.

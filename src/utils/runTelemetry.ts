@@ -1,3 +1,5 @@
+import type { getRunReview } from './runOutliers';
+
 export type Point = { x: number; y: number };
 export type InputSource = 'joystick' | 'keyboard' | 'pointer' | 'eye';
 export type Mission = 'target' | 'comet';
@@ -26,6 +28,7 @@ export type RunEvent = {
 
 export type MissionTrace = {
   game?: 'odd-corners' | 'steady-path';
+  simulatedGaze?: boolean;
   frames: TraceFrame[];
   events: RunEvent[];
   inputs: InputSource[];
@@ -35,9 +38,14 @@ export type RunTelemetry = {
   id: string;
   endedAt: string;
   ageGroup: string;
+  playerName?: string | null;
   target: MissionTrace;
   comet: MissionTrace;
 };
+
+export function isDemoRun(run: RunTelemetry) {
+  return !!(run.target.simulatedGaze || run.comet.simulatedGaze);
+}
 
 function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -190,49 +198,54 @@ export function summarizeRun(run: RunTelemetry) {
   };
 }
 
-export function downloadRunSummaries(runs: RunTelemetry[]) {
-  const header = [
-    'Run', 'Ended (UTC)', 'Age band', 'Inputs', 'Hits', 'Shots', 'Decoy hits', 'Median target-to-hit (ms)',
-    'Stars caught', 'Path efficiency (%)', 'Path deviation (% arena diagonal)', 'Mean heading change (degrees)',
-    'Active stick change (% full axis range)', 'Visual focus (%)', 'Excessive gaze samples',
-    'Mean gaze error (% arena diagonal)', 'Median eye-to-hand (ms)', 'Median flash-to-gaze (ms)',
-    'Mean off-trail deviation (% arena diagonal)', 'Joystick jitter (% full axis range)',
-    'Median gaze lead (% of trail)', 'Stage 1 game', 'Stage 2 game',
+export function downloadRunRecord(
+  run: RunTelemetry,
+  stats: ReturnType<typeof summarizeRun>,
+  review: ReturnType<typeof getRunReview>,
+) {
+  const measurements: [string, string | number | null | undefined][] = [
+    ['Name', run.playerName],
+    ['Age group', run.ageGroup],
+    ['Correct selections', stats.hits],
+    ['Selection attempts', stats.shots],
+    [run.target.game === 'odd-corners' ? 'Wrong-corner clicks' : 'Decoy hits', stats.decoys],
+    ['Median flash-to-click (ms)', stats.median],
+    ['Median flash-to-gaze (ms)', stats.gazeLatencyMedian],
+    ['Median gaze-to-click (ms)', stats.eyeToHandMedian],
+    ['Stars caught', stats.stars],
+    ['Mean off-trail deviation (% arena diagonal)', stats.trailDeviation],
+    ['Joystick jitter (% full axis range)', stats.joystickJitter],
+    ['Median gaze lead (% of trail)', stats.eyeHandLead],
+    ['Path efficiency (%)', stats.pathEfficiency],
+    ['Path deviation (% arena diagonal)', stats.pathDeviation],
+    ['Mean heading change (degrees)', stats.meanTurnDegrees],
+    ['Active stick change (% full axis range)', stats.stickChange],
+    ['Visual focus (%)', stats.visualFocusPct],
+    ['Excessive gaze samples', stats.excessiveCount],
+    ['Mean gaze error (% arena diagonal)', stats.meanGazeDeviationPct],
   ];
-  const rows = runs.map((run) => {
-    const stats = summarizeRun(run);
-    const inputs = [...new Set([...run.target.inputs, ...run.comet.inputs])];
-    return [
-      run.id,
-      run.endedAt,
-      run.ageGroup,
-      inputs.join(' + '),
-      stats.hits,
-      stats.shots,
-      stats.decoys,
-      stats.median,
-      stats.stars,
-      stats.pathEfficiency?.toFixed(1),
-      stats.pathDeviation?.toFixed(1),
-      stats.meanTurnDegrees?.toFixed(1),
-      stats.stickChange?.toFixed(1),
-      stats.visualFocusPct !== null ? stats.visualFocusPct.toFixed(1) : '—',
-      stats.excessiveCount,
-      stats.meanGazeDeviationPct?.toFixed(1),
-      stats.eyeToHandMedian,
-      stats.gazeLatencyMedian,
-      stats.trailDeviation?.toFixed(2),
-      stats.joystickJitter?.toFixed(2),
-      stats.eyeHandLead?.toFixed(1),
-      run.target.game ?? 'target-lock',
-      run.comet.game ?? 'comet-tunnel',
-    ];
-  });
-  const csv = [header, ...rows].map((row) => row.map((cell) => '"' + String(cell ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const reviewedMeasurements = [
+    ['Eye–hand separation', review.separation.flags],
+    ['Off-trail deviation', review.deviation.flags],
+    ['Flash-to-click time', review.response.flags],
+  ] as const;
+  for (const [label, flags] of reviewedMeasurements) {
+    measurements.push(
+      [`${label} unusual samples`, flags.filter((flag) => flag === 'unusual').length],
+      [`${label} large outliers`, flags.filter((flag) => flag === 'large').length],
+    );
+  }
+  const rows = [measurements.map(([label]) => label), measurements.map(([, value]) => value)];
+  const csv = rows.map((row) => row.map((cell) => {
+    // Spreadsheet apps can interpret user-provided text as a formula despite CSV quoting.
+    const raw = String(cell ?? '');
+    const safe = typeof cell === 'string' && /^[\s]*[=+@-]/.test(raw) ? "'" + raw : raw;
+    return '"' + safe.replace(/"/g, '""') + '"';
+  }).join(',')).join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'brighteyed-run-summaries.csv';
+  link.download = `brighteyed-run-${run.id}.csv`;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

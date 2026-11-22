@@ -1,208 +1,139 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useArcade } from '../../context/ArcadeContext';
-import { useEyeTracking, sendEyeCalibration } from '../../utils/useEyeTracking';
+import { eyeTrackerEnabled, liveGaze, sendEyeCalibration, useEyeTracking } from '../../utils/useEyeTracking';
+import { useGazeDemo } from '../../utils/gazeDemo';
 import { playSound } from '../../utils/audio';
-import { Eye, CheckCircle2, Target } from 'lucide-react';
 
-const CALIBRATION_STEPS = [
-  { id: 1, name: 'TOP-RIGHT', left: '84%', top: '18%', x: 0.84, y: 0.18 },
-  { id: 2, name: 'TOP-LEFT', left: '16%', top: '18%', x: 0.16, y: 0.18 },
-  { id: 3, name: 'BOTTOM-RIGHT', left: '84%', top: '82%', x: 0.84, y: 0.82 },
-  { id: 4, name: 'BOTTOM-LEFT', left: '16%', top: '82%', x: 0.16, y: 0.82 },
-  { id: 5, name: 'CENTER', left: '50%', top: '50%', x: 0.50, y: 0.50 },
+const targets = [
+  { name: 'top right', x: 84, y: 18 },
+  { name: 'top left', x: 16, y: 18 },
+  { name: 'bottom right', x: 84, y: 82 },
+  { name: 'bottom left', x: 16, y: 82 },
+  { name: 'center', x: 50, y: 50 },
 ];
 
+type RawPoint = { rawX: number; rawY: number };
+type Sample = RawPoint & { time: number };
+
+function median(values: number[]) {
+  const sorted = values.sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return (sorted[middle] + sorted[(sorted.length - 1) >> 1]) / 2;
+}
+
 export function WarmupScreen() {
-  const { advanceCalibration, nextStep } = useArcade();
+  const { nextStep } = useArcade();
   const eye = useEyeTracking();
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [dwellProgress, setDwellProgress] = useState(0);
-  const [isFinished, setIsFinished] = useState(false);
+  const demoMode = useGazeDemo();
+  const samples = useRef<Sample[]>([]);
+  const targetButton = useRef<HTMLButtonElement>(null);
+  const [points, setPoints] = useState<RawPoint[]>([]);
+  const [demoCaptures, setDemoCaptures] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [calibrated, setCalibrated] = useState(false);
+  const [error, setError] = useState('');
+  const captureCount = demoMode ? demoCaptures : points.length;
+  const target = targets[captureCount];
+
   useEffect(() => {
-    if (!isFinished) return;
-    const timer = window.setTimeout(nextStep, 700);
-    return () => window.clearTimeout(timer);
-  }, [isFinished, nextStep]);
+    samples.current = [];
+    targetButton.current?.focus({ preventScroll: true });
+  }, [captureCount]);
 
-  // Collected range calibration bounds
-  const recordedPoints = useRef<{ x: number; y: number }[]>([]);
-
-  const currentTarget = CALIBRATION_STEPS[currentStepIndex];
-  const currentEye = useRef(eye);
-  currentEye.current = eye;
-  const lockPoint = useRef<() => void>(() => {});
-  lockPoint.current = handleLockPoint;
-  const progress = useRef(0);
-  const lockedIndex = useRef(-1);
-
-  // Dwell detection: automatically advances when player holds gaze on the star
   useEffect(() => {
-    if (isFinished || !currentTarget) return;
+    const { rawX, rawY, receivedAt } = eye;
+    if (!liveGaze(eye) || rawX === undefined || rawY === undefined) return;
+    const previous = samples.current;
+    if (previous.at(-1)?.time === receivedAt) return;
+    samples.current = [...previous.filter(({ time }) => receivedAt - time <= 500), { rawX, rawY, time: receivedAt }];
+  }, [eye]);
 
-    const checkGazeDwell = () => {
-      const sample = currentEye.current;
-      const focused = sample.connected && !sample.isBlinking
-        && Math.hypot(sample.gazeX - currentTarget.x, sample.gazeY - currentTarget.y) <= 0.24;
-      progress.current = Math.max(0, progress.current + (focused ? 12 : -8));
-      if (progress.current >= 100) lockPoint.current();
-      else setDwellProgress(progress.current);
-    };
+  async function capture() {
+    if (saving || !target) return;
+    if (demoMode) {
+      const count = demoCaptures + 1;
+      setDemoCaptures(count);
+      if (count === targets.length) setCalibrated(true);
+      playSound(count === targets.length ? 'win' : 'blip');
+      return;
+    }
+    const now = performance.now();
+    const recent = samples.current.filter(({ time }) => now - time <= 500);
+    if (!liveGaze(eye) || recent.length < 5 || recent.at(-1)!.time - recent[0].time < 150) {
+      setError(eye.connected && eye.rawX === undefined && !eye.isBlinking
+        ? 'Update the Pi tracker to enable calibration.'
+        : 'Hold your gaze on the star for a moment, then capture again.');
+      return;
+    }
 
-    const dwellTimer = window.setInterval(checkGazeDwell, 50);
-    return () => window.clearInterval(dwellTimer);
-  }, [isFinished, currentTarget]);
+    setError('');
+    const next = [...points, {
+      rawX: median(recent.map(({ rawX }) => rawX)),
+      rawY: median(recent.map(({ rawY }) => rawY)),
+    }];
+    if (next.length < targets.length) {
+      playSound('blip');
+      setPoints(next);
+      return;
+    }
 
-  function handleLockPoint() {
-    if (lockedIndex.current === currentStepIndex) return;
-    lockedIndex.current = currentStepIndex;
-    progress.current = 0;
-    setDwellProgress(0);
-    playSound('blip');
-    if (eye.connected && !eye.isBlinking) recordedPoints.current.push({ x: eye.gazeX, y: eye.gazeY });
-
-    if (currentStepIndex < CALIBRATION_STEPS.length - 1) {
-      setCurrentStepIndex((prev) => prev + 1);
-      advanceCalibration();
-    } else {
-      // Completed all 4 corners + center!
-      setIsFinished(true);
+    setSaving(true);
+    try {
+      await sendEyeCalibration(next);
+      setPoints(next);
+      setCalibrated(true);
       playSound('win');
-      advanceCalibration();
-
-      // Send exact range bounds to Raspberry Pi 5 engine
-      const xs = recordedPoints.current.map((p) => p.x);
-      const ys = recordedPoints.current.map((p) => p.y);
-      if (recordedPoints.current.length === CALIBRATION_STEPS.length) void sendEyeCalibration({
-        minX: Math.min(...xs, 0.35),
-        maxX: Math.max(...xs, 0.65),
-        minY: Math.min(...ys, 0.40),
-        maxY: Math.max(...ys, 0.55),
-      });
+    } catch (failure) {
+      setPoints([]);
+      setError(failure instanceof Error ? failure.message : 'Calibration failed. Try again.');
+    } finally {
+      setSaving(false);
     }
   }
 
+  const gaze = calibrated ? liveGaze(eye) : null;
   return (
     <section className="training-screen">
       <div className="training-heading">
-        <div>
-          <p className="arcade-kicker">STEP 3 OF 6: OCULOMOTOR RANGE CALIBRATION</p>
-          <h1>Eye Tracking 4-Corner Calibration</h1>
-        </div>
-        <p className="beacon-count" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Eye size={18} color="#00E5FF" />
-          <span>{isFinished ? '5 / 5' : `${currentStepIndex + 1} / 5`}</span>
-        </p>
+        <h1>Eye tracking calibration</h1>
+        <p className="beacon-count">{captureCount} / {targets.length}</p>
       </div>
+      <p>{calibrated
+        ? 'Check the gaze marker before continuing.'
+        : 'Keep your head still. Look at the star for a moment, then press Enter or click the star to capture.'}</p>
 
-      <p>
-        {!isFinished ? (
-          <>
-            Look directly at the glowing star in the{' '}
-            <strong style={{ color: '#00E5FF', textTransform: 'uppercase' }}>
-              {currentTarget?.name}
-            </strong>{' '}
-            corner to verify your full range of motion.
-          </>
-        ) : (
-          <span style={{ color: 'var(--good)' }}>
-            ✓ Full 2D Eye Range of Motion Calibrated! Top, bottom, left, and right bounds verified.
-          </span>
-        )}
-      </p>
-
-      {/* Calibration Field */}
-      <div className="training-field" style={{ position: 'relative', overflow: 'hidden' }}>
-        {/* Live Eye Reticle (Cyan) */}
-        {eye.connected && !eye.isBlinking && (
-          <div
-            style={{
-              position: 'absolute',
-              left: `${eye.gazeX * 100}%`,
-              top: `${eye.gazeY * 100}%`,
-              transform: 'translate(-50%, -50%)',
-              pointerEvents: 'none',
-              zIndex: 20,
-              transition: 'left 0.04s linear, top 0.04s linear',
-            }}
-          >
-            <div
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                border: '2px solid #00E5FF',
-                boxShadow: '0 0 10px #00E5FF',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#00E5FF' }} />
-            </div>
-            <span style={{ fontSize: '9px', color: '#00E5FF', marginLeft: 16, fontFamily: 'monospace' }}>
-              EYE
-            </span>
-          </div>
-        )}
-
-        {/* Current Active Target Star */}
-        {!isFinished && currentTarget && (
-          <button
-            type="button"
-            className="warmup-star"
-            style={{
-              position: 'absolute',
-              left: currentTarget.left,
-              top: currentTarget.top,
-              transform: 'translate(-50%, -50%)',
-              cursor: 'pointer',
-              zIndex: 10,
-              boxShadow: `0 0 ${15 + dwellProgress * 0.3}px #00E5FF`,
-            }}
-            onClick={handleLockPoint}
-            aria-label={`Look at ${currentTarget.name}`}
-          >
+      <div className="training-field" style={{ position: 'relative' }}>
+        {target && (
+          <button ref={targetButton} type="button" className="warmup-star" disabled={saving || (!demoMode && !eyeTrackerEnabled)}
+            aria-label={`Capture gaze at the ${target.name}`}
+            style={{ position: 'absolute', left: `${target.x}%`, top: `${target.y}%`, transform: 'translate(-50%, -50%)' }}
+            onClick={capture}>
             ✦
           </button>
         )}
-
-        {/* Visual Target Ring with Dwell Indicator */}
-        {!isFinished && currentTarget && (
-          <div
-            style={{
-              position: 'absolute',
-              left: currentTarget.left,
-              top: currentTarget.top,
-              transform: 'translate(-50%, -50%)',
-              width: 54,
-              height: 54,
-              borderRadius: '50%',
-              border: '2px dashed rgba(0, 229, 255, 0.4)',
-              pointerEvents: 'none',
-            }}
-          />
+        {gaze && (
+          <span aria-hidden="true" style={{
+            position: 'absolute', left: `${gaze.x * 100}%`, top: `${gaze.y * 100}%`,
+            transform: 'translate(-50%, -50%)', width: 24, height: 24, borderRadius: '50%',
+            border: '2px solid #00E5FF', pointerEvents: 'none',
+          }} />
         )}
       </div>
 
       <div className="training-footer">
-        <p role="status">
-          {!isFinished ? (
-            <span>
-              Hold your gaze on the star or click/tap it to lock. (Progress:{' '}
-              <strong style={{ color: '#00E5FF' }}>{dwellProgress}%</strong>)
-            </span>
-          ) : (
-            'Range of motion complete! Ready for Target Lock.'
-          )}
-        </p>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          {!isFinished && (
-            <button type="button" className="arcade-btn alt" onClick={handleLockPoint}>
-              Lock {currentTarget?.name}
-            </button>
-          )}
-          {!isFinished && <button type="button" className="arcade-btn" onClick={nextStep}>Skip Calibration</button>}
-        </div>
+        <p role="status">{error || (saving ? 'Saving calibration…' : !demoMode && !eyeTrackerEnabled ? 'Eye tracker is disabled.' : '')}</p>
+        {calibrated ? (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="arcade-btn alt" onClick={() => {
+              setCalibrated(false);
+              setPoints([]);
+              setDemoCaptures(0);
+            }}>Calibrate again</button>
+            <button type="button" className="arcade-btn" onClick={nextStep}>Continue</button>
+          </div>
+        ) : (
+          <button type="button" className="arcade-btn" disabled={saving} onClick={nextStep}>Skip calibration</button>
+        )}
       </div>
     </section>
   );

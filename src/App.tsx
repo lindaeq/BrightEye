@@ -12,6 +12,7 @@ import { Mission2Screen } from './components/screens/Mission2Screen';
 import { ResultsScreen } from './components/screens/ResultsScreen';
 import { OperatorScreen } from './components/screens/OperatorScreen';
 import { StageIntro } from './components/common/StageIntro';
+import { getGazeDemo, setGazeDemo, useGazeDemo } from './utils/gazeDemo';
 
 const stages = ['profile', 'warmup', 'howto', 'mission1', 'mission2', 'results'];
 const screens = {
@@ -24,6 +25,7 @@ export function AppContent() {
   const controller = useArcadeController();
   const { setMouseMode } = controller;
   const camera = useCameraFeed();
+  const gazeDemo = useGazeDemo();
   const [showCamera, setShowCamera] = useState(false);
   const home = stepId === 'start';
   const operator = stepId === 'operator';
@@ -32,13 +34,31 @@ export function AppContent() {
   const stage = stages.indexOf(stepId);
   const scene = useRef<HTMLDivElement>(null);
   const hardwareReady = camera.ready && !!controller.status.source && controller.status.joystick && controller.status.button;
-  const canStart = controller.mouseMode || hardwareReady;
+  const canStart = !!gazeDemo || controller.mouseMode || hardwareReady;
   const inlinePreview = home || (stepId === 'warmup' && (!controller.mouseMode || camera.ready));
   const showPreview = inlinePreview || showCamera;
 
   useEffect(() => {
     scene.current?.focus();
   }, [stepId]);
+
+  useEffect(() => {
+    function handleDemoShortcut(event: KeyboardEvent) {
+      if (event.repeat || event.defaultPrevented) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select'))) return;
+      const key = event.key.toLowerCase();
+      const command = event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+      const steadyFallback = event.code === 'KeyD' && event.altKey && event.shiftKey && !event.metaKey && !event.ctrlKey;
+      if (!(command && (key === 'a' || key === 'd')) && !steadyFallback) return;
+      event.preventDefault();
+      const mode = command && key === 'a' ? 'darting' : 'steady';
+      setGazeDemo(getGazeDemo() === mode ? null : mode);
+    }
+
+    window.addEventListener('keydown', handleDemoShortcut);
+    return () => window.removeEventListener('keydown', handleDemoShortcut);
+  }, []);
 
   function startGame() {
     if (!canStart) return;
@@ -75,7 +95,7 @@ export function AppContent() {
       </header>
       <main className="arcade-display" data-home={home} data-camera-inline={inlinePreview}>
         <div key={stepId} ref={scene} tabIndex={-1} className="arcade-scene">
-          {Screen && (intro ? <StageIntro stage={intro}><Screen /></StageIntro> : <Screen />)}
+          {Screen && (intro ? <StageIntro stage={intro}><Screen /></StageIntro> : <Screen key={stepId === 'warmup' ? gazeDemo ?? 'live' : stepId} />)}
           {operator && <OperatorScreen cameraReady={camera.ready} />}
           {home && (
             <section className="launch-screen">

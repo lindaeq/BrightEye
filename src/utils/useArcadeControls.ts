@@ -16,6 +16,7 @@ export function useArcadeControls(move: (x: number, y: number, seconds: number, 
     let previousTime = performance.now();
     let presses = input.current.presses;
     const keydown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable]')) return;
       if (steeringKeys.includes(event.code)) {
         event.preventDefault();

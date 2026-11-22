@@ -67,6 +67,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .arcade-brand { display: flex; gap: 12px; align-items: center; font: 700 1rem var(--f-heading); }
 .arcade-brand svg { color: var(--pink); }
 .arcade-hud-actions { grid-column: 3; justify-self: end; display: flex; gap: 6px; }
+.demo-gaze-marker {
+  position: absolute; z-index: 3; width: 22px; height: 22px; border: 2px solid #00e5ff;
+  border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;
+}
 .arcade-icon {
   display: grid;
   place-items: center;
@@ -434,7 +438,6 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .operator-chart-switch button { padding: 12px 16px; color: var(--pink); border-bottom: 3px solid transparent; }
 .operator-chart-switch button[aria-pressed='true'] { color: var(--ink); background: var(--fld); border-bottom-color: var(--good); }
 .run-chart { min-width: 0; padding: clamp(12px, 2vw, 24px); }
-.operator-measurements h2 { margin-bottom: 10px; }
 .operator-measurements table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .operator-measurements th, .operator-measurements td { padding: 7px 12px; border-bottom: 1px solid var(--line); text-align: left; }
 .operator-measurements thead, .operator-metric-group { background: var(--fld); color: var(--pink); }
@@ -479,6 +482,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .operator-rail { position: sticky; top: 10px; z-index: 4; display: grid; gap: 4px; padding: 8px; border: 1px solid var(--line); background: var(--page); }
 .operator-rail a { color: var(--ink); padding: 8px 10px; border-inline-start: 3px solid var(--section-accent); }
 .operator-rail a:hover, .operator-rail a:focus-visible { color: var(--section-accent); background: var(--body); }
+.operator-layout [data-section='chat'] { --section-accent: #b8ded6; --section-fill: #182c2b; }
 .operator-layout [data-section='history'] { --section-accent: #a9d2f7; --section-fill: #192a39; }
 .operator-layout [data-section='summary'] { --section-accent: #a1e4ce; --section-fill: #172f2a; }
 .operator-layout [data-section='replay'] { --section-accent: #d3b1fb; --section-fill: #30233e; }

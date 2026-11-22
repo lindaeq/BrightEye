@@ -13,6 +13,7 @@ import { useMissionTrace } from '../../utils/useMissionTrace';
 export function Mission2Screen() {
   const { completeComet, nextStep } = useArcade();
   const eye = useEyeTracking();
+  const demoPoint = eye.demoMode ? liveGaze(eye) : null;
   const field = useRef<HTMLDivElement>(null);
   const ship = useRef(trail[0]);
   const captures = useRef(0);
@@ -131,6 +132,8 @@ export function Mission2Screen() {
         ))}
         {distractor && <span className="steady-star steady-distractor" aria-hidden="true"
           style={{ left: `${distractor.x * 100}%`, top: `${distractor.y * 100}%` }}>✦</span>}
+        {demoPoint && <span className="demo-gaze-marker" aria-hidden="true"
+          style={{ left: `${demoPoint.x * 100}%`, top: `${demoPoint.y * 100}%` }} />}
         <div className="training-ship" data-in-path={onTrail} aria-hidden="true"
           style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%` }}>
           <PixelSprite name="ship" size={6} style={{ transform: `rotate(${position.heading}deg)` }} />

@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
+import { demoGaze, useGazeDemo, type GazeDemo } from './gazeDemo';
 
 declare const __QNX_TRACKER_ENABLED__: boolean;
 export const eyeTrackerEnabled = __QNX_TRACKER_ENABLED__;
 
 export interface EyeTrackingData {
+  demoMode?: GazeDemo;
+  rawX?: number;
+  rawY?: number;
   gazeX: number;             // Normalized 0.0 - 1.0 (0 = left, 1 = right)
   gazeY: number;             // Normalized 0.0 - 1.0 (0 = top, 1 = bottom)
   saccadeDetected: boolean;  // True when rapid eye snap occurs (<200ms)
@@ -35,7 +39,29 @@ export function liveGaze(sample: EyeTrackingData) {
 
 export function useEyeTracking() {
   const [data, setData] = useState<EyeTrackingData>(cachedGaze);
+  const demoMode = useGazeDemo();
   useEffect(() => {
+    if (demoMode) {
+      const start = performance.now();
+      function sample() {
+        if (!demoMode) return;
+        const now = performance.now();
+        setData({
+          ...demoGaze(demoMode, now - start),
+          demoMode,
+          isBlinking: false,
+          saccadicIntrusions: 0,
+          velocity: 0,
+          timestampMs: now,
+          receivedAt: now,
+          connected: true,
+        });
+      }
+      sample();
+      const timer = window.setInterval(sample, 28);
+      return () => window.clearInterval(timer);
+    }
+    setData(cachedGaze);
     if (!eyeTrackerEnabled) return;
     const lifetime = new AbortController();
     let timer: number;
@@ -56,6 +82,8 @@ export function useEyeTracking() {
         timestamp = json.timestampMs;
         if (performance.now() - lastFrameAt > 800) throw new Error('Eye tracking frames are stale');
         const nextData: EyeTrackingData = {
+          rawX: Number.isFinite(json.rawX) ? json.rawX : undefined,
+          rawY: Number.isFinite(json.rawY) ? json.rawY : undefined,
           gazeX: json.gazeX,
           gazeY: json.gazeY,
           saccadeDetected: Boolean(json.saccadeDetected),
@@ -84,20 +112,20 @@ export function useEyeTracking() {
       lifetime.abort();
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [demoMode]);
 
-  return data;
+  return data.demoMode === (demoMode ?? undefined) ? data : { ...cachedGaze, connected: false };
 }
 
-export async function sendEyeCalibration(bounds: { minX: number; maxX: number; minY: number; maxY: number }) {
-  if (!eyeTrackerEnabled) return;
-  try {
-    await fetch('/qnx/calibrate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bounds),
-    });
-  } catch {
-    // If Pi offline, calibration holds locally
+export async function sendEyeCalibration(points: { rawX: number; rawY: number }[]) {
+  const response = await fetch('/qnx/calibrate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ points }),
+    signal: AbortSignal.timeout(3000),
+  });
+  const result = await response.json();
+  if (!response.ok || result.status !== 'calibrated') {
+    throw new Error(result.message || 'The tracker could not save calibration.');
   }
 }

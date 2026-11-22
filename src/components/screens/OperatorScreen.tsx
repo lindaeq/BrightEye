@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useArcade } from '../../context/ArcadeContext';
 import { useArcadeController } from '../../context/ArcadeController';
-import { downloadRunSummaries, summarizeRun, type RunTelemetry } from '../../utils/runTelemetry';
+import { downloadRunRecord, isDemoRun, summarizeRun, type RunTelemetry } from '../../utils/runTelemetry';
+import { ResultsChatbot } from '../common/ResultsChatbot';
 import { RunReplay } from '../common/RunReplay';
 import { RunCharts } from '../common/RunCharts';
 import { BuzzAnalysis } from '../common/BuzzAnalysis';
@@ -14,10 +15,10 @@ function measurement(value: number | null, unit: string, decimals = 0) {
 }
 
 export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
-  const { pendingRuns, runsVersion, uploadRun, goToStep } = useArcade();
+  const { latestRun, pendingRuns, runsVersion, uploadRun, goToStep } = useArcade();
   const { status } = useArcadeController();
   const eye = useEyeTracking();
-  const [savedRuns, setSavedRuns] = useState<Pick<RunTelemetry, 'id' | 'endedAt'>[]>([]);
+  const [savedRuns, setSavedRuns] = useState<Pick<RunTelemetry, 'id' | 'endedAt' | 'playerName'>[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [loadedRun, setLoadedRun] = useState<RunTelemetry>();
   const [loading, setLoading] = useState(true);
@@ -25,13 +26,17 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
   const [detailError, setDetailError] = useState('');
   const [actionError, setActionError] = useState('');
   const [deleting, setDeleting] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const runs = [...pendingRuns, ...savedRuns.filter((item) => !pendingRuns.some(({ id }) => id === item.id))];
+  if (latestRun && (loading || loadError || isDemoRun(latestRun)) && !runs.some(({ id }) => id === latestRun.id)) {
+    runs.unshift(latestRun);
+  }
   const currentId = runs.some(({ id }) => id === selectedId) ? selectedId : runs[0]?.id;
   const pendingRun = pendingRuns.find(({ id }) => id === currentId);
-  const savedId = pendingRun ? undefined : currentId;
-  const run = pendingRun ?? (loadedRun?.id === savedId ? loadedRun : undefined);
+  const savedId = !pendingRun && savedRuns.some(({ id }) => id === currentId) ? currentId : undefined;
+  const localRun = latestRun?.id === currentId ? latestRun : undefined;
+  const run = pendingRun ?? localRun ?? (loadedRun?.id === savedId ? loadedRun : undefined);
+  const demoRun = !!run && isDemoRun(run);
   const review = useMemo(() => run && getRunReview(run), [run]);
 
   useEffect(() => {
@@ -40,14 +45,26 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
     setLoadError('');
     void fetch('/api/runs', { signal: controller.signal }).then(async (response) => {
       if (response.status === 405) throw new Error('Your run API is out of date. Restart it, then reload runs.');
-      if (!response.ok) throw new Error('Could not load saved runs from Tiger Cloud.');
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        if (response.status === 503 && body?.message === 'Run storage is not configured') {
+          throw new Error('Run storage is missing DATABASE_URL in server/.env.local.');
+        }
+        if (response.status === 503 && body?.message === 'Run storage is unavailable') {
+          throw new Error('The run API could not query Tiger Cloud. Check the server log for the database error.');
+        }
+        throw new Error('The run API is unavailable. Start it with npm run start --prefix server, then refresh runs.');
+      }
+      if (!response.headers.get('content-type')?.includes('application/json')) {
+        throw new Error('The run API returned a web page. Check that /api/runs is routed to the Node server.');
+      }
       const history = await response.json();
       if (!Array.isArray(history)) throw new Error('The run API returned an unexpected response.');
       if (!controller.signal.aborted) setSavedRuns(history);
     }).catch((error: unknown) => {
       if (controller.signal.aborted) return;
       setLoadError(error instanceof Error && error.name === 'Error'
-        ? error.message : 'Could not load saved runs from Tiger Cloud.');
+        ? error.message : 'Could not reach the run API. Check that it is running, then refresh runs.');
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
@@ -56,7 +73,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
 
   useEffect(() => {
     setDetailError('');
-    if (!savedId) return;
+    if (!savedId || localRun) return;
     const controller = new AbortController();
     void fetch(`/api/runs/${savedId}`, { signal: controller.signal }).then(async (response) => {
       if (!response.ok) throw new Error();
@@ -66,7 +83,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
       if (!controller.signal.aborted) setDetailError('Could not load this run.');
     });
     return () => controller.abort();
-  }, [savedId, refresh]);
+  }, [savedId, localRun, refresh]);
 
   async function deleteRun() {
     if (!savedId || !window.confirm('Permanently delete this run from Tiger Cloud?')) return;
@@ -86,26 +103,16 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
     }
   }
 
-  async function exportRuns() {
-    setExporting(true);
-    setActionError('');
-    try {
-      const response = await fetch('/api/runs?full=1');
-      if (!response.ok) throw new Error();
-      const history: RunTelemetry[] = await response.json();
-      downloadRunSummaries([...history, ...pendingRuns.filter(({ id }) => !history.some((item) => item.id === id))]);
-    } catch {
-      setActionError('Could not export saved runs. Try again.');
-    } finally {
-      setExporting(false);
-    }
+  function exportRun() {
+    if (run && stats && review && !demoRun) downloadRunRecord(run, stats, review);
   }
+
   const stats = useMemo(() => run && summarizeRun(run), [run]);
   const observations = useMemo(() => run && stats && review
     ? summarizeRunForOperator(run, stats, review) : [], [run, stats, review]);
   const inputs = run ? [...new Set([...run.target.inputs, ...run.comet.inputs])] : [];
   const checks = [
-    ['Eye tracker', eye.connected],
+    ['Eye tracker', eye.connected && !eye.demoMode],
     ['Camera', cameraReady],
     [status.source === 'gamepad' ? 'USB gamepad' : 'Arduino', !!status.source],
     ['Joystick', status.joystick],
@@ -152,7 +159,8 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
     { id: 'history', label: 'Run history' },
     ...(run ? [
       { id: 'summary', label: 'Run recap' },
-      { id: 'replay', label: 'Motion replay' },
+      { id: 'chat', label: 'Gemini chat' },
+      { id: 'replay', label: 'Video overview' },
       { id: 'graphs', label: 'Graphs' },
       { id: 'measurements', label: 'Measurements' },
     ] : []),
@@ -164,8 +172,8 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
       <header className="operator-panel-heading">
         <h1>Operator dashboard</h1>
         <div className="operator-actions">
-          <button type="button" className="arcade-btn operator-action" data-accent="export" disabled={!runs.length || exporting}
-            onClick={exportRuns}>{exporting ? 'Exporting…' : 'Export summary CSV'}</button>
+          <button type="button" className="arcade-btn operator-action" data-accent="export" disabled={!run || deleting || demoRun}
+            onClick={exportRun}>Export selected run CSV</button>
           <button type="button" className="arcade-btn operator-action" data-accent="home" onClick={() => goToStep('start')}>Home</button>
         </div>
       </header>
@@ -182,7 +190,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
                   setActionError('');
                 }}>
                   {runs.map((item) => <option key={item.id} value={item.id}>
-                    {new Date(item.endedAt).toLocaleString()} · {item.id.slice(0, 8)}
+                    {item.playerName || 'Unnamed run'} · {new Date(item.endedAt).toLocaleString()} · {item.id.slice(0, 8)}
                   </option>)}
                 </select></label>
               )}
@@ -198,7 +206,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
             {(loadError || detailError || actionError) && <p role="alert">{loadError || detailError || actionError}</p>}
             {!runs.length && !loadError && <p>{loading ? 'Loading saved runs…' : 'Complete both missions to save a run.'}</p>}
             {savedId && !run && !detailError && <p role="status">Loading run from Tiger Cloud…</p>}
-            {run && <p className="input-hint">{pendingRun ? 'Upload pending' : 'Saved in Tiger Cloud'}
+            {run && <p className="input-hint">{demoRun ? 'Demo run · simulated gaze · current session only' : pendingRun ? 'Upload pending' : savedId ? 'Saved in Tiger Cloud' : 'Current session'}
               {' · '}Age band {run.ageGroup || 'unavailable'} · Input {inputs.join(' + ') || 'none recorded'}</p>}
           </section>
           {run && review && (
@@ -212,10 +220,21 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
                   <p>If coordination or attention difficulties persist during everyday activities, at home or at school, bring those observations to your child’s primary care provider. They can help decide whether an assessment is appropriate. <a href="https://caringforkids.cps.ca/handouts/behavior-and-development/developmental-coordination-disorder" target="_blank" rel="noreferrer">Canadian Paediatric Society guidance</a></p>
                 </details>
               </section>
-              <div id="operator-replay" data-section="replay" className="operator-section"><RunReplay key={run.id} run={run} /></div>
-              <div id="operator-graphs" data-section="graphs" className="operator-section"><RunCharts run={run} review={review} /></div>
-              <section id="operator-measurements" data-section="measurements" className="operator-measurements operator-section">
-                <h2>Run measurements</h2>
+              {stats && (
+                <section id="operator-chat" data-section="chat" className="operator-section" aria-label="Gemini chat">
+                  <ResultsChatbot key={run.id} m1Hits={stats.hits} starsCaught={stats.stars} stats={stats} />
+                </section>
+              )}
+              <details key={`replay-${run.id}`} id="operator-replay" data-section="replay" className="operator-disclosure operator-section">
+                <summary>Video overview</summary>
+                <RunReplay key={run.id} run={run} />
+              </details>
+              <details key={`graphs-${run.id}`} id="operator-graphs" data-section="graphs" className="operator-disclosure operator-section">
+                <summary>Graphs</summary>
+                <RunCharts run={run} review={review} />
+              </details>
+              <details key={`measurements-${run.id}`} id="operator-measurements" data-section="measurements" className="operator-measurements operator-disclosure operator-section">
+                <summary>Run measurements</summary>
                 <table>
                   <thead><tr><th scope="col">Measurement</th><th scope="col">Description</th><th scope="col">Value</th></tr></thead>
                   {reviewRows.length > 0 && <tbody>
@@ -240,7 +259,7 @@ export function OperatorScreen({ cameraReady }: { cameraReady: boolean }) {
                     </tbody>
                   ))}
                 </table>
-              </section>
+              </details>
             </>
           )}
           <details id="operator-hardware" data-section="hardware" className="operator-disclosure operator-section">
