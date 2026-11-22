@@ -1,0 +1,52 @@
+{
+  "cli_version": "0.13.4",
+  "checkpoint_id": "01M80TJA567YRY762RXFG27KY3",
+  "session_id": "f34ea08c-d362-4ab7-bd82-4b7cd04732dd",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-22T05:09:54.6228059Z",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "save_step_count": 2,
+  "files_touched": [
+    "src/components/common/ResultsChatbot.tsx",
+    "src/components/screens/HowToScreen.tsx",
+    "src/components/screens/Mission1Screen.tsx",
+    "src/components/screens/Mission2Screen.tsx",
+    "src/components/screens/OperatorScreen.tsx",
+    "src/index.css"
+  ],
+  "agent": "Antigravity",
+  "model": "gemini-3.8-flash-high",
+  "turn_id": "58a66cbe90a4",
+  "token_usage": {
+    "input_tokens": 296066,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 9456250,
+    "output_tokens": 38564,
+    "api_call_count": 77
+  },
+  "session_token_usage": {
+    "input_tokens": 1825314,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 33260485,
+    "output_tokens": 255917,
+    "api_call_count": 310
+  },
+  "redaction": {
+    "replacements": 1,
+    "layers": {
+      "betterleaks": 0,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 1,
+      "credentialed_uri": 0,
+      "entropy": 0,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 15
+  }
+}
